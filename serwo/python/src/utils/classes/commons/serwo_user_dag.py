@@ -38,7 +38,8 @@ class SerWOUserDag:
                                 NodeName=node["NodeName"], 
                                 Path=node["Path"],
                                 EntryPoint=node["EntryPoint"],
-                                MemoryInMB=node["MemoryInMB"])
+                                MemoryInMB=node["MemoryInMB"],
+                                IsAsync=node["IsAsync"])
             index += 1
 
         # add edges in the dag

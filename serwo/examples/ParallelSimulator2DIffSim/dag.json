@@ -1,0 +1,92 @@
+{
+  "WorkflowName": "ParallelSimulator2DIffSimFanoutDiffSim",
+  "Nodes": [
+    {
+      "NodeId": "1",
+      "NodeName": "Splitter",
+      "Path": "examples/ParallelSimulator2DIffSim/Splitter",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "2",
+      "NodeName": "Transpiler0",
+      "Path": "examples/ParallelSimulator2DIffSim/Transpiler0",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "3",
+      "NodeName": "Transpiler1",
+      "Path": "examples/ParallelSimulator2DIffSim/Transpiler1",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "4",
+      "NodeName": "Simulator0",
+      "Path": "examples/ParallelSimulator2DIffSim/Simulator",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 5120,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "5",
+      "NodeName": "Simulator1",
+      "Path": "examples/ParallelSimulator2DIffSim/Simulator1",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    
+    {
+      "NodeId": "6",
+      "NodeName": "Reconstructor",
+      "Path": "examples/ParallelSimulator2DIffSim/Reconstructor",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    }
+  ],
+  "Edges": [
+    {
+      "Splitter": [
+        "Transpiler0"
+      ]
+    },
+    {
+      "Splitter": [
+        "Transpiler1"
+      ]
+    },
+    {
+      "Transpiler0": [
+        "Simulator0"
+      ]
+    },
+    {
+      "Transpiler1": [
+        "Simulator1"
+      ]
+    },
+    {
+      "Simulator0": [
+        "Reconstructor"
+      ]
+    },
+    {
+      "Simulator1": [
+        "Reconstructor"
+      ]
+    }
+  ]
+}

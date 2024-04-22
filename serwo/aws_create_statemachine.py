@@ -1,5 +1,6 @@
 # Python base imports
 import os
+import copy
 import sys
 import pathlib
 import shutil
@@ -26,7 +27,7 @@ class AWS:
     Constructor
     """
 
-    def __init__(self, user_dir, dag_desc_filename, trigger_type, part_id, region):
+    def __init__(self, user_dir, dag_desc_filename, trigger_type, part_id, region, is_containerbased):
         # populating these from external modules
         # TODO - parameterize the region as well (hardcoded for now)
         self.__region = region
@@ -62,6 +63,7 @@ class AWS:
 
         # DAG related parameters
         self.__user_dag = AWSUserDag(self.__dag_definition_path)
+        self.__networkxDag = copy.deepcopy(self.__user_dag.get_dag())
         self.__sam_stackname = (
             ##random 3 digit number
 
@@ -72,6 +74,7 @@ class AWS:
         self.__outputs_filepath = (
             self.__serwo_resources_dir / f"aws-{self.__region}-{self.__part_id}.json"
         )
+        self.__is_containerbased = is_containerbased
 
     """
     NOTE - This is a replacement for the create_env.sh file
@@ -117,6 +120,7 @@ class AWS:
         runner_template_filename,
         runner_template_dir,
         runner_filename,
+        is_containerbased_aws
     ):
         # TODO - should this be taken in from the dag-description?
         fn_requirements_filename = "requirements.txt"
@@ -133,6 +137,9 @@ class AWS:
         """
         logger.info(f"Moving requirements file for {fn_name} for user at to {fn_dir}")
         shutil.copyfile(src=f"{user_fn_path / fn_requirements_filename}", dst=f"{fn_dir / fn_requirements_filename}")
+
+        if is_containerbased_aws:
+            shutil.copyfile(src=f"{user_fn_path}/Dockerfile", dst=f"{fn_dir}/Dockerfile")
 
         # Add the XFaaS specific requrirements on to the function requirements
         logger.info(
@@ -260,7 +267,7 @@ class AWS:
     Create standalone runner templates
     """
 
-    def __create_standalone_runners(self, xfaas_fn_build_dir):
+    def __create_standalone_runners(self, xfaas_fn_build_dir, is_containerbased_aws):
         function_metadata_list = self.__user_dag.get_node_param_list()
         function_object_map = self.__user_dag.get_node_object_map()
 
@@ -297,7 +304,8 @@ class AWS:
                 function_runner_filename,
                 self.__runner_template_dir,
                 # self.__serwo_utils_dir,
-                runner_template_filename
+                runner_template_filename,
+                is_containerbased_aws
             )
 
             runner_template_filepath = (
@@ -313,7 +321,6 @@ class AWS:
         function_object_map = self.__user_dag.get_node_object_map()
         statemachine = self.__get_statemachine_params()
         statemachine_structure = self.__user_dag.get_statemachine_structure()
-
         try:
             AWSSfnYamlGenerator.generate_sfn_yaml(
                 function_metadata_list,
@@ -323,34 +330,73 @@ class AWS:
                 self.__aws_build_dir,
                 self.__yaml_file,
                 self.__trigger_type,
+                self.__is_containerbased
             )
         except Exception as e:
             logger.error(e)
             traceback.print_exc()
             exit()
-
+        
         logger.info("Building Statemachines JSON..")
-        AWSSfnAslBuilder.generate_statemachine_json(
-            statemachine_structure, self.__aws_build_dir, self.__json_file
-        )
+        sfn_json =  AWSSfnAslBuilder.generate_statemachine_json(
+                        statemachine_structure, self.__aws_build_dir, self.__json_file
+                    )
+        
+        sfn_json_copy = copy.deepcopy(json.loads(sfn_json))
+        # adding the changes w.r.t is async here
+        async_statename = None
+        # for state in sfn_json_copy["States"]:
+        #     if self.__user_dag.get_node_object_map()[state].get_isasync():
+        #         async_statename = state
+        
+        if async_statename is not None:
+            asyncnodeId = self.__user_dag.get_nodeIDMap()[async_statename]
+            PollStateId = [n for n in self.__networkxDag.neighbors(asyncnodeId)][0]
+            PollStateName = [k for k,v in self.__user_dag.get_nodeIDMap().items() if v == PollStateId][0]
+            nextstateId = [n for n in self.__networkxDag.neighbors(PollStateId)][0]
+            nextStateName = [k for k,v in self.__user_dag.get_nodeIDMap().items() if v == nextstateId][0]
+
+            sfn_json_copy["States"][async_statename]["Next"] = "Wait X Seconds"
+            sfn_json_copy["States"]["Wait X Seconds"] = {
+                "Type": "Wait",
+                "Next": PollStateName,
+                "Seconds": "50" # TODO - take this wait from user dag
+            }
+            sfn_json_copy["States"][PollStateName]["Next"] = "Job Complete?"
+            sfn_json_copy["States"]["Job Complete?"] = {
+                "Type": "Choice",
+                "Choices": [
+                    {
+                    "Variable": "$.status",
+                    "StringEquals": "SUCCEEDED",
+                    "Next": nextStateName
+                    }
+                ],
+                "Default": "Wait X Seconds"
+            }
+            
+
+        with open(f"{self.__aws_build_dir}/{self.__json_file}", "w") as statemachinejson:
+            statemachinejson.write(json.dumps(sfn_json_copy))
 
     """
     NOTE - build function
     """
 
-    def build_resources(self):
+    def build_resources(self, is_containerbased_aws):
         logger.info(f"Creating environment for {self.__user_dag.get_user_dag_name()}")
-        xfaas_fn_build_dir = self.__create_environment()
+        xfaas_fn_build_dir = self.__create_environment() 
 
         logger.info(
             f"Initating standalone runner creation for {self.__user_dag.get_user_dag_name()}"
         )
-        self.__create_standalone_runners(xfaas_fn_build_dir)
+        self.__create_standalone_runners(xfaas_fn_build_dir, is_containerbased_aws)
 
         logger.info(
             f"Generating ASL templates for {self.__user_dag.get_user_dag_name()}, \
                      AWS Stack - {self.__sam_stackname}"
         )
+
         self.__generate_asl_template()
 
         logger.info("Adding API specification to user directory")

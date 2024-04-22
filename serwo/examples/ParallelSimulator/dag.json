@@ -1,0 +1,94 @@
+{
+  "WorkflowName": "ParallelSimulator2Fan",
+  "Nodes": 
+  [
+    {
+      "NodeId": "1",
+      "NodeName": "Splitter",
+      "Path": "examples/ParallelSimulator/Splitter",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "2",
+      "NodeName": "Transpiler0",
+      "Path": "examples/ParallelSimulator/Transpiler0",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "3",
+      "NodeName": "Transpiler1",
+      "Path": "examples/ParallelSimulator/Transpiler1",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "4",
+      "NodeName": "Simulator0",
+      "Path": "examples/ParallelSimulator/Simulator",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "5",
+      "NodeName": "Simulator1",
+      "Path": "examples/ParallelSimulator/Simulator",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    },
+    {
+      "NodeId": "6",
+      "NodeName": "Reconstructor",
+      "Path": "examples/ParallelSimulator/Reconstructor",
+      "EntryPoint": "app.py",
+      "CSP": "NA",
+      "MemoryInMB": 1536,
+      "IsAsync": false
+    }
+  ],
+  "Edges": [
+    {
+        "Splitter": [
+            "Transpiler0"
+        ]
+    },
+    {
+      "Splitter": [
+          "Transpiler1"
+      ]
+    },
+    {
+        "Transpiler1": [
+            "Simulator1"
+        ]
+    },
+    
+    {
+        "Transpiler0": [
+            "Simulator0"
+        ]
+    },
+    {
+        "Simulator0": [
+            "Reconstructor"
+        ]
+    },
+    {
+        "Simulator1": [
+            "Reconstructor"
+        ]
+    }
+]
+}
+

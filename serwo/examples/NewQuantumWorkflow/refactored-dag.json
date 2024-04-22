@@ -1,0 +1,86 @@
+{
+    "WorkflowName": "QuantumWorkflow",
+    "Nodes": [
+        {
+            "NodeId": "1",
+            "NodeName": "Invoke",
+            "Path": "examples/NewQuantumWorkflow/Invoke",
+            "EntryPoint": "Invoke.py",
+            "CSP": "NA",
+            "MemoryInMB": 128,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "2",
+            "NodeName": "Transpile",
+            "Path": "examples/NewQuantumWorkflow/Transpile",
+            "EntryPoint": "Transpile.py",
+            "CSP": "NA",
+            "MemoryInMB": 128,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "3",
+            "NodeName": "Submit",
+            "Path": "examples/NewQuantumWorkflow/Submit",
+            "EntryPoint": "Submit.py",
+            "CSP": "NA",
+            "MemoryInMB": 128,
+            "IsAsync": true
+        },
+        {
+            "NodeId": "4",
+            "NodeName": "Poll",
+            "Path": "examples/NewQuantumWorkflow/Poll",
+            "EntryPoint": "Poll.py",
+            "CSP": "NA",
+            "MemoryInMB": 128,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "5",
+            "NodeName": "Reconstruction",
+            "Path": "examples/NewQuantumWorkflow/Reconstruction",
+            "EntryPoint": "Reconstruction.py",
+            "CSP": "NA",
+            "MemoryInMB": 128,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "253",
+            "NodeName": "CollectLogs",
+            "Path": "/Users/tuhinkhare/Work/IISc/DREAM-Lab/XFaaS-Dev/XFaaS/serwo/examples/NewQuantumWorkflow/CollectLogs",
+            "EntryPoint": "func.py",
+            "CSP": "NA",
+            "MemoryInMB": 128,
+            "IsAsync": false
+        }
+    ],
+    "Edges": [
+        {
+            "Invoke": [
+                "Transpile"
+            ]
+        },
+        {
+            "Transpile": [
+                "Submit"
+            ]
+        },
+        {
+            "Submit": [
+                "Poll"
+            ]
+        },
+        {
+            "Poll": [
+                "Reconstruction"
+            ]
+        },
+        {
+            "Reconstruction": [
+                "CollectLogs"
+            ]
+        }
+    ]
+}

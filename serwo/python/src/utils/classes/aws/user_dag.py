@@ -34,8 +34,13 @@ class UserDag:
                 node["NodeName"],
                 node["Path"],
                 node["EntryPoint"],
-                node["MemoryInMB"],
+                node["MemoryInMB"]
             )
+
+            print("NodeKeys -", list(node.keys()))
+            if node["IsAsync"]:
+                self.__functions[node["NodeName"]].set_isasync()
+
             self.__dag.add_node(
                 nodeID,
                 NodeName=node["NodeName"],
@@ -241,3 +246,9 @@ class UserDag:
             tasklist = output_dag.nodes[node]["machine_list"]
 
         return tasklist
+
+    def get_nodeIDMap(self):
+        return self.__nodeIDMap
+    
+    def get_dag(self):
+        return self.__dag

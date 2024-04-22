@@ -1,0 +1,30 @@
+{
+    "WorkflowName": "QuantumSample",
+    "Nodes": [
+      {
+        "NodeId": "1",
+        "NodeName": "Gen",
+        "Path": "examples/qxfaas-sample/subckt-gen",
+        "EntryPoint": "Trigger.py",
+        "CSP": "NA",
+        "MemoryInMB": 128,
+        "IsContainerBased": true
+      },
+      {
+        "NodeId": "2",
+        "NodeName": "Split",
+        "Path": "examples/qxfaas-sample/subckt-submit",
+        "EntryPoint": "Data.py",
+        "CSP": "NA",
+        "MemoryInMB": 256,
+        "IsAsync": true,
+        "IsContainerBased": true
+      }
+    ],
+    "Edges": [
+      {
+        "Gen": ["Split"]
+      }
+    ]
+  }
+  

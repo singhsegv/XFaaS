@@ -4,6 +4,7 @@ archive/
 __pycache__
 sam-build/
 scratchpad/
+scratch/
 temp-build/
 user-input-to-be-integrated/
 .idea/
@@ -31,3 +32,4 @@ build
 log_files
 serwo/config
 recents
+CollectLogs

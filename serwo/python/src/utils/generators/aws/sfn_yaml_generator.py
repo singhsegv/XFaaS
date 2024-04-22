@@ -26,8 +26,10 @@ def generate_sfn_yaml(
     output_dir: str,
     yaml_file: str,
     trigger_type: TriggerType,
+    is_containerbased: bool
 ) -> None:
     # function resource strings
+    
     arns = []
     for function in function_params:
         try:
@@ -69,7 +71,10 @@ def generate_sfn_yaml(
     try:
         file_loader = FileSystemLoader(template_dir)
         env = Environment(loader=file_loader)
-        template = env.get_template(get_template_file(trigger_type))
+        if is_containerbased:
+            template = env.get_template("awsfn-container-based.yaml")
+        else:
+            template = env.get_template(get_template_file(trigger_type))
         print(f"Created jinja2 environment")
     except:
         raise AWSSfnYamlGeneratorExeception(

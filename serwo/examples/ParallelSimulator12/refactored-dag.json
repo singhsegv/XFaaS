@@ -1,0 +1,435 @@
+{
+    "WorkflowName": "ParallelSimulator12Fanout",
+    "Nodes": [
+        {
+            "NodeId": "1",
+            "NodeName": "Splitter",
+            "Path": "examples/ParallelSimulator12/Splitter",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "13",
+            "NodeName": "Transpiler0",
+            "Path": "examples/ParallelSimulator12/Transpiler0",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "2",
+            "NodeName": "Transpiler1",
+            "Path": "examples/ParallelSimulator12/Transpiler1",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "3",
+            "NodeName": "Transpiler2",
+            "Path": "examples/ParallelSimulator12/Transpiler2",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "4",
+            "NodeName": "Transpiler3",
+            "Path": "examples/ParallelSimulator12/Transpiler3",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "5",
+            "NodeName": "Transpiler4",
+            "Path": "examples/ParallelSimulator12/Transpiler4",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "6",
+            "NodeName": "Transpiler5",
+            "Path": "examples/ParallelSimulator12/Transpiler5",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "7",
+            "NodeName": "Transpiler6",
+            "Path": "examples/ParallelSimulator12/Transpiler6",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "8",
+            "NodeName": "Transpiler7",
+            "Path": "examples/ParallelSimulator12/Transpiler7",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "9",
+            "NodeName": "Transpiler8",
+            "Path": "examples/ParallelSimulator12/Transpiler8",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "10",
+            "NodeName": "Transpiler9",
+            "Path": "examples/ParallelSimulator12/Transpiler9",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "11",
+            "NodeName": "Transpiler10",
+            "Path": "examples/ParallelSimulator12/Transpiler10",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "12",
+            "NodeName": "Transpiler11",
+            "Path": "examples/ParallelSimulator12/Transpiler11",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "14",
+            "NodeName": "Simulator0",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "15",
+            "NodeName": "Simulator1",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "16",
+            "NodeName": "Simulator2",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "17",
+            "NodeName": "Simulator3",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "18",
+            "NodeName": "Simulator4",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "19",
+            "NodeName": "Simulator5",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "20",
+            "NodeName": "Simulator6",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "21",
+            "NodeName": "Simulator7",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "22",
+            "NodeName": "Simulator8",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "23",
+            "NodeName": "Simulator9",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "24",
+            "NodeName": "Simulator10",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "25",
+            "NodeName": "Simulator11",
+            "Path": "examples/ParallelSimulator12/Simulator",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "26",
+            "NodeName": "Reconstructor",
+            "Path": "examples/ParallelSimulator12/Reconstructor",
+            "EntryPoint": "app.py",
+            "CSP": "NA",
+            "MemoryInMB": 1536,
+            "IsAsync": false
+        },
+        {
+            "NodeId": "253",
+            "NodeName": "CollectLogs",
+            "Path": "/Users/tuhinkhare/Work/IISc/DREAM-Lab/XFaaS-Dev/XFaaS/serwo/examples/ParallelSimulator12/CollectLogs",
+            "EntryPoint": "func.py",
+            "CSP": "NA",
+            "MemoryInMB": 128,
+            "IsAsync": false
+        }
+    ],
+    "Edges": [
+        {
+            "Splitter": [
+                "Transpiler0"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler1"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler2"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler3"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler4"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler5"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler6"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler7"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler8"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler9"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler10"
+            ]
+        },
+        {
+            "Splitter": [
+                "Transpiler11"
+            ]
+        },
+        {
+            "Transpiler0": [
+                "Simulator0"
+            ]
+        },
+        {
+            "Transpiler1": [
+                "Simulator1"
+            ]
+        },
+        {
+            "Transpiler2": [
+                "Simulator2"
+            ]
+        },
+        {
+            "Transpiler3": [
+                "Simulator3"
+            ]
+        },
+        {
+            "Transpiler4": [
+                "Simulator4"
+            ]
+        },
+        {
+            "Transpiler5": [
+                "Simulator5"
+            ]
+        },
+        {
+            "Transpiler6": [
+                "Simulator6"
+            ]
+        },
+        {
+            "Transpiler7": [
+                "Simulator7"
+            ]
+        },
+        {
+            "Transpiler8": [
+                "Simulator8"
+            ]
+        },
+        {
+            "Transpiler9": [
+                "Simulator9"
+            ]
+        },
+        {
+            "Transpiler10": [
+                "Simulator10"
+            ]
+        },
+        {
+            "Transpiler11": [
+                "Simulator11"
+            ]
+        },
+        {
+            "Simulator0": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator1": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator2": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator3": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator4": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator5": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator6": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator7": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator8": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator9": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator10": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Simulator11": [
+                "Reconstructor"
+            ]
+        },
+        {
+            "Reconstructor": [
+                "CollectLogs"
+            ]
+        }
+    ]
+}

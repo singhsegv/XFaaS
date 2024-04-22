@@ -11,6 +11,7 @@ class Function:
         self._module_name = end_point.split(".")[0]
         self._memory = memory
         # TODO - add function id
+        self._isasync = False
 
     def get_id(self):
         return self._id
@@ -46,3 +47,9 @@ class Function:
 
     def get_memory_in_mb(self):
         return self._memory
+
+    def set_isasync(self):
+        self._isasync = True
+    
+    def get_isasync(self):
+        return self._isasync
