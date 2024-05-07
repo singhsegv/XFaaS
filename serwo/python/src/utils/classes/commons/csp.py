@@ -2,8 +2,9 @@ import scripts.azure.azure_resource_generator as azure_resource_generator
 import scripts.azure.azure_builder as azure_builder
 import scripts.azure.azure_deploy as azure_deployer
 
-
 from serwo.aws_create_statemachine import AWS
+from serwo.openwhisk_create_statemachine import OpenWhisk
+
 class CSP:
     __name = None
 
@@ -15,15 +16,20 @@ class CSP:
 
 
     #TODO: Factory pattern for csp
-    def build_resources(self,user_dir, dag_definition_path, region, part_id, dag_definition_file, is_netherite):
+    def build_resources(self, user_dir, dag_definition_path, region, part_id, dag_definition_file, is_netherite):
         if self.__name == 'azure':
             self.build_az(dag_definition_file, dag_definition_path, part_id, region, user_dir, is_netherite)
-        if self.__name == 'aws':
+        elif self.__name == 'aws':
             aws_deployer = AWS(user_dir, dag_definition_file, "REST", part_id, region)
             aws_deployer.build_resources()
             aws_deployer.build_workflow()
             aws_deployer.deploy_workflow()
-            pass
+        elif self.__name == 'openwhisk':
+            # TODO: Convert me to a generic implementation for private clouds
+            private_cloud_deployer = OpenWhisk(user_dir=user_dir, dag_file_name=dag_definition_file, part_id=part_id)
+            private_cloud_deployer.build_resources()
+            private_cloud_deployer.build_workflow()
+            private_cloud_deployer.deploy_workflow()
 
 
     def build_az(self, dag_definition_file, dag_definition_path, part_id, region, user_dir,is_netherite):
