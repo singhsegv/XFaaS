@@ -24,11 +24,16 @@ class CSP:
             aws_deployer.build_resources()
             aws_deployer.build_workflow()
             aws_deployer.deploy_workflow()
-        elif self.__name == 'openwhisk':
-            # TODO: Convert me to a generic implementation for private clouds
+        elif self.__name.lower() == 'openwhisk':
             private_cloud_deployer = OpenWhisk(user_dir=user_dir, dag_file_name=dag_definition_file, part_id=part_id)
+            
+            print(":" * 80, "Generating resources for OpenWhisk Actions")
             private_cloud_deployer.build_resources()
+
+            print(":" * 80, "Generatinng workflow files for OpenWhisk")
             private_cloud_deployer.build_workflow()
+
+            print(":" * 80, "Deploying OpenWhisk")
             private_cloud_deployer.deploy_workflow()
 
 

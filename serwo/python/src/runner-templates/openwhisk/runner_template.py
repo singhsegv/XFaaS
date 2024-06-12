@@ -16,10 +16,8 @@ from python.src.utils.classes.commons.serwo_objects import build_serwo_list_obje
 
 downstream = 0
 
-
 def get_delta(timestamp):
     return round(time.time() * 1000) - timestamp
-
 
 # Openwhisk entry point
 def main(args):
@@ -128,4 +126,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    print("Main Method")
+    print("Main Method: Nothing is executed")

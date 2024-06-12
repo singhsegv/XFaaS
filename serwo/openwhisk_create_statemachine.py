@@ -1,10 +1,8 @@
-"""
-Remarks:
-* Each cloud could use its own folder with an API contract
-"""
 import os
+import glob
 import shutil
 import zipfile
+import subprocess
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
@@ -15,7 +13,7 @@ logger = LoggerFactory.get_logger(__file__, log_level="INFO")
 
 
 class OpenWhisk:
-    def __init__(self, user_dir, dag_file_name, part_id) -> None:
+    def __init__(self, user_dir, dag_file_name, part_id):
         self.__user_dir = Path(user_dir)
         self.__dag_file_name = dag_file_name
         self.__part_id = part_id
@@ -25,29 +23,53 @@ class OpenWhisk:
         # xfaas specfic directories
         self.__serwo_build_dir = self.__user_dir / "build" / "workflow"
         self.__serwo_resources_dir = self.__serwo_build_dir / "resources"
+        
+        # This holds utility scripts and templates
         self.__serwo_utils_dir = self.__parent_directory_path / "python"
-
-        # TODO: Change me to generic private cloud implementation
         self.__runner_template_dir = self.__serwo_utils_dir / "src" / "runner-templates" / "openwhisk"
 
         self.__dag_definition_path = self.__user_dir / self.__dag_file_name
 
         # openwhisk specific directories
-        # TODO: Decide between wsk cli and REST api based implementation
         self.__openwhisk_build_dir = self.__serwo_build_dir / "openwhisk"
         self.__openwhisk_functions_dir = self.__openwhisk_build_dir / "functions"
+        # This holds the zip files to be deployed
         self.__openwhisk_artifacts_dir = self.__openwhisk_build_dir / "artifacts"
+        # This holds the bash script to setup local nodejs for openwhisk composer
+        self.__openwhisk_helpers_dir = self.__openwhisk_build_dir / "helpers"
+        self.__openwhisk_helpers_nodejs_dir = self.__openwhisk_helpers_dir / "local_nodejs"
 
         # DAG related parameters
         self.__user_dag = UserDag(self.__dag_definition_path)
+        self.__openwhisk_workflow_orchestrator_action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/orchestrator"
+        self.__openwhisk_composer_input_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.js"
+        self.__openwhisk_composer_output_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.json"
+        self.__openwhisk_workflow_redis_input = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_input.json" # required to allow parallel action in OpenWhisk
 
 
     def __create_environment(self):
         """
-        TODO: Check if the generated folders need to have __init__.py (be a module)
+        Create the directories to put functions into.
+        * /functions/ directory holds the converted functions
+        * /artifacts/ directory contains the zip files to be deployed to OpenWhisk
         """
+        # TODO: Check me removing and shizz
+        if os.path.exists(self.__openwhisk_functions_dir):
+            shutil.rmtree(self.__openwhisk_functions_dir)
+        
+        if os.path.exists(self.__openwhisk_artifacts_dir):
+            shutil.rmtree(self.__openwhisk_artifacts_dir)
+
+        # Not deleting this to save the time spent on downloading nodejs
+        # if os.path.exists(self.__openwhisk_helpers_dir):
+        #     shutil.rmtree(self.__openwhisk_helpers_dir)
+
         self.__openwhisk_functions_dir.mkdir(parents=True, exist_ok=True)
         self.__openwhisk_artifacts_dir.mkdir(parents=True, exist_ok=True)
+        self.__openwhisk_helpers_dir.mkdir(parents=True, exist_ok=True)
+        self.__openwhisk_helpers_nodejs_dir.mkdir(parents=True, exist_ok=True)
+
+        print("bp")
     
 
     def __render_runner_template(self, runner_template_dir, function_id, function_name, function_runner_filename):
@@ -107,10 +129,8 @@ class OpenWhisk:
         fn_module_name,
         runner_template_filename,
         runner_template_dir,
-        runner_filename
     ):
         """
-        TODO: Check WTF am I doing
         user_fn_path: Workflow code is taken from hardcoded XFaaS samples from this path 
         """
         fn_requirements_filename = "requirements.txt"
@@ -130,12 +150,12 @@ class OpenWhisk:
         self.__append_xfaas_default_requirements(dst_requirements_path)
 
         # place the dependencies folder from the user function path if it exists
-        if os.path.exists(user_fn_path / "dependencies"):
-            shutil.copytree(
-                user_fn_path / "dependencies", 
-                dst_fn_dir / "dependencies", 
-                dirs_exist_ok=True
-            )
+        # if os.path.exists(user_fn_path / "dependencies"):
+        #     shutil.copytree(
+        #         user_fn_path / "dependencies", 
+        #         dst_fn_dir / "dependencies", 
+        #         dirs_exist_ok=True
+        #     )
 
         logger.info(f"Moving xfaas boilerplate for {fn_name}")
         shutil.copytree(src=self.__serwo_utils_dir, dst=dst_fn_dir / "python", dirs_exist_ok=True)
@@ -154,11 +174,18 @@ class OpenWhisk:
         with open(temp_runner_path, "w") as file:
             file.write(contents)
 
-        # TODO - Fix the stickytape issue: GitHub Issue link - https://github.com/dream-lab/XFaaS/issues/4
-        logger.info(f"Stickytape the runner template for dependency resolution")
-        runner_file_path = dst_fn_dir / f"{runner_filename}.py"
-        os.system(f"stickytape {temp_runner_path} > {runner_file_path}")
 
+        # XFaaS code provided by the user comes as the module name due to
+        # import USER_FUNCTION_PLACEHOLDER being replaced by the module name
+        final_import_file_src_path = user_fn_path / f"{fn_module_name}.py"
+        final_import_file_dst_path = dst_fn_dir / f"{fn_module_name}.py"
+        final_runner_file_path = dst_fn_dir / "__main__.py"
+
+        os.system(f"cp {final_import_file_src_path} {final_import_file_dst_path}")
+
+        # Standalone runner from other clouds is replaced by __main__.py file for OpenWhisk
+        os.system(f"cp {temp_runner_path} {final_runner_file_path}")
+       
         logger.info(f"Deleting temporary runner")
         os.remove(temp_runner_path)
 
@@ -167,23 +194,25 @@ class OpenWhisk:
 
     def __create_standalone_runners(self):
         """
-        TODO: Create functions with __main__.py name
+        1. The function entrypoint is __main__.py due to OpenWhisk deployment
+        requirements for large library imports
+
         """
         function_metadata_list = self.__user_dag.get_node_param_list()
         function_object_map = self.__user_dag.get_node_object_map()
         
         for function_metadata in function_metadata_list:
-            function_name = function_metadata["name"]
-            function_runner_filename = function_object_map[function_name].get_runner_filename()
-            
-            # generalize later
-            function_runner_filename = "__main__"
+            function_name = function_metadata["name"]        
+            function_runner_filename = "__main__" # OpenWhisk requires the main file name to be __main__.py
+
+            function_runner_filename = function_object_map[
+                function_metadata["name"]
+            ].get_runner_filename()
             
             function_path = function_object_map[function_name].get_path()
             function_module_name = function_object_map[function_name].get_module_name()
             function_id = function_object_map[function_name].get_id()
 
-            # template the function runner template in the runner template directory
             runner_template_filename = self.__render_runner_template(
                 runner_template_dir=self.__runner_template_dir,
                 function_id=function_id,
@@ -199,7 +228,6 @@ class OpenWhisk:
                 function_module_name,
                 function_runner_filename,
                 self.__runner_template_dir,
-                runner_template_filename
             )
 
             runner_template_filepath = self.__runner_template_dir / runner_template_filename
@@ -209,31 +237,20 @@ class OpenWhisk:
 
     def __create_workflow_orchestrator(self, file_name_prefix):
         """
-        Create composer.js file for openwhisk composer
-        TODO: Fix me -> Hardcoded AF js file
+        Generates a js file to send as an input to openwhisk composer.
+        See: https://github.com/apache/openwhisk-composer
+
         TODO: Setup a local npm + node combo with openwhisk-composer library
         """
         composer_file_path = self.__openwhisk_build_dir / f"{file_name_prefix}_workflow_composition.js"
+        redis_input_file_path = self.__openwhisk_build_dir / f"{file_name_prefix}_workflow_input.json" # required to allow parallel action in OpenWhisk
 
-        # TODO: Everything here is dummy stuff
-        # Another assumption here is that action creation will be taken care of at some other place
-        action_sequence = []
-        for func_name in self.__user_dag.get_node_object_map():
-            action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/{func_name}"
-            action_sequence.append(f'composer.action("{action_name}")')
+        # ------------------------------------------------------------------------------------------------
+        generated_code = self.__user_dag.get_orchestrator_code()
         
-        with open(composer_file_path, "w") as f:
-            f.write('const composer = require("openwhisk-composer");\n\n')
-
-            temp = ", ".join(action_sequence)
-            f.write(f'module.exports = composer.sequence({temp});\n')
-
-        # TODO: This is also temporary
         # To allow parallel workflows and other stuff, a redis instance is needed
         # with an input.json file with corresponding redis info
-        redis_input_file_path = self.__openwhisk_build_dir / f"{file_name_prefix}_input.json"
-        with open(redis_input_file_path, "w") as f:
-            f.write("""
+        redis_input_file = """
 {
     "$composer": {
         "redis": {
@@ -244,15 +261,26 @@ class OpenWhisk:
         }
     }
 }
-""")
+"""
+        # ------------------------------------------------------------------------------------------------
+        with open(composer_file_path, "w") as f:
+            f.write(generated_code)
+        
+        with open(redis_input_file_path, "w") as f:
+            f.write(redis_input_file)
     
 
     def build_resources(self):
         """
-        TODO: Implement me
-        1. Create action compatible function files
-        2. Create openwhisk composer files -> Check AWS logic for the graph creation
+        First of the 3 main functions for the workflow.
+
+        1. Creates OpenWhisk's action compatible source code function files
+        2. TODO: Creates openwhisk composer js files
         """
+        logger.info("*" * 10)
+        logger.info("Build Resources: Started")
+        logger.info("*" * 10)
+
         logger.info(f"Creating environment for {self.__user_dag.get_user_dag_name()}")
         self.__create_environment()
 
@@ -261,65 +289,146 @@ class OpenWhisk:
         
         logger.info(f"Initating openwhisk composer js orchestrator for {self.__user_dag.get_user_dag_name()}")
         self.__create_workflow_orchestrator(self.__user_dag.get_user_dag_name())
-        
-        # Some API gateway??
+
+        logger.info("*" * 10)
+        logger.info("Build Resources: Success")
+        logger.info("*" * 10)
 
 
     def build_workflow(self):
         """
-        TODO: Implement me
-        TODO: Differentiate between docker actions vs pure python actions
-        1. Create zip artifacts for all the functions
-        2. Create json file out of the compose.js file
+        Second of the 3 main functions for the workflow.
+        - Creates zip artifacts for all the functions
+        - Downloads a local nodejs copy using "n"
+        - Converts the openwhisk-composer js file into json
 
-        Need wsk, node, npm
+        ------------
+        Assumptions:
+        ------------
+        - NodeJS is installed -> Right now using 'n' to install nodejs (https://www.npmjs.com/package/n)
+        - wsk tool is setup -> User's responsibility
         """
-        
-        # Creates a zip artifact from each function
+        # Create a zip artifact from each function
         for func_name in self.__user_dag.get_node_object_map():
-            # func = self.__user_dag.get_node_object_map()[func_name]
+            output_artifact_path = self.__openwhisk_build_dir/"artifacts"/f"{func_name}.zip"
             
-            py_file = self.__openwhisk_functions_dir / func_name / "__main__.py"
-            req_file = self.__openwhisk_functions_dir / func_name / "requirements.txt"
+            files_to_zip = []
+            for file in os.listdir(self.__openwhisk_functions_dir/func_name):
+                if file.endswith(".py"):
+                    curr_file_path = self.__openwhisk_functions_dir/func_name/file
+                    # basename thing is required to unzip correctly
+                    files_to_zip.append([curr_file_path, os.path.basename(curr_file_path)])
             
-            output_artifact_path = self.__openwhisk_build_dir / "artifacts" / f"{func_name}.zip"
+            with zipfile.ZipFile(output_artifact_path, "w") as archive:
+                for fz in files_to_zip:
+                    archive.write(filename=fz[0], arcname=os.path.basename(fz[1]))
 
-            # Zip the requirements and __main__.py from input_dir -> Write to output_dir
-            with zipfile.ZipFile(output_artifact_path, "w") as f:
-                f.write(py_file, os.path.basename(py_file))
-                f.write(req_file, os.path.basename(req_file))
+                req_file_path = self.__openwhisk_functions_dir/func_name/"requirements.txt"
+                archive.write(filename=req_file_path, arcname=os.path.basename(req_file_path))
 
-        composer_input_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.js"
-        composer_output_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.json"
+                xfaas_folder_path = str(self.__openwhisk_functions_dir/func_name/"python"/"**"/"*")
+                for file in glob.glob(xfaas_folder_path, recursive=True):
+                    path = file.split("python/")[1]
+                    archive.write(filename=file, arcname=os.path.join("python", path))
 
-        # TODO: Change me... Be a better human than this
-        os.system(f"source ~/.bashrc && compose.js {composer_input_path} -o {composer_output_path}")
+        logger.info(":" * 10)
+        logger.info("Installing nodejs and openwhisk-composer")
+        logger.info(":" * 10)
+
+        # TODO: if nodejs doesn't exist here
+        builder_dir = str(self.__openwhisk_helpers_dir.resolve())
+        builder_path = os.path.join(builder_dir, "builder.sh")
+        nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
+        subprocess.call(["sh", builder_path, nodejs_local_dir])
+
+        logger.info(":" * 10)
+        logger.info("Installing nodejs and openwhisk-composer: SUCCESS")
+        logger.info(":" * 10)
+
+        logger.info(":" * 10)
+        logger.info("Creating openwhisk-composer files")
+        logger.info(":" * 10)
+
+        ow_composer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "compose.js")
+        os.system(f"{ow_composer_binary_path} {self.__openwhisk_composer_input_path} -o {self.__openwhisk_composer_output_path}")
+        
+        logger.info(":" * 10)
+        logger.info("Creating openwhisk-composer files: SUCCESS")
+        logger.info(":" * 10)
 
 
     def deploy_workflow(self):
         """
-        TODO: Setup wsk if not present somehow
-        1. Deploy all the actions
-        2. Deploy composition
-        3. Web hooks and stuff
-        # Create or update the action
+        Third of the 3 main functions for the workflow.
+        1. Removes existing actions with the current workflow's name
+        2. Deploys all the actions
+        3. Creates openwhisk-compatible orchestrator json file using third-party tool
+        4. Deploys the orchestrator action
 
-        TODO: wsk -i action invoke /guest/graph-workflow -P input.json --result -> Handle this input.json thingy somehow
-        TODO: Throw Exception if wsk command is not working -> Or find a better way to connect to the cluster
+        -----
+        TODO:
+        1. Figure out web api mode, web hooks and related stuff
+        2. Handle the input.json somehow to allow parallel workflow actions - "wsk -i action invoke /guest/graph-workflow -P input.json"
+        3. Throw Exception if wsk command is not working -> Or find a better way to connect to the cluster
+        -----
         """
-        logger.info(f"Deleting any existing package with same name")
+        logger.info(":" * 10)
+        logger.info("Deleting any existing OpenWhisk components")
+        logger.info(":" * 10)
 
-        # TODO: Check if deleting a package deletes all the actions automatically?
-        os.system(f"wsk -i package delete {self.__user_dag.get_user_dag_name()}")
-        os.system(f"wsk -i package create {self.__user_dag.get_user_dag_name()}")
+        # ----------------- Existing OpenWhisk components deletion -----------------
+        # TODO: Limit this step to current workflow name or some package name
+        for node_name in self.__user_dag.get_node_object_map():
+            curr_action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/{node_name}"
+            try:
+                os.system(f"wsk -i action delete {curr_action_name}")
+            except Exception as e:
+                # TODO: Handle me gracefully
+                print("Either the openwhisk action does not exist or some error happened")
+                print(e)
+            
+        try:
+            os.system(f"wsk -i action delete {self.__openwhisk_workflow_orchestrator_action_name}")
+        except Exception as e:
+            # TODO: Handle me gracefully
+            print("Either the openwhisk workflow orchestrator does not exist or some error happened")
+            print(e)
 
-        # Create actions manually
+        try:
+            # TODO: This creates the package in the "/guest/" namespace, need to figure out how to change that
+            # Hints: Helm changes are required
+            os.system(f"wsk -i package delete {self.__user_dag.get_user_dag_name()}")
+            os.system(f"wsk -i package create {self.__user_dag.get_user_dag_name()}")
+        except Exception as e:
+            # TODO: Handle me gracefully
+            print("Either the openwhisk package does not exist or some error happened")
+            print(e)
+        # -------------------------------------------------------------------------
+
+        # ----------------- New OpenWhisk components creation -----------------
+        # Creating the actions manually using the wsk tool
+        logger.info(":" * 10)
+        logger.info("Deploying OpenWhisk action for each function")
+        logger.info(":" * 10)
+
         for func_name in self.__user_dag.get_node_object_map():
             action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/{func_name}"
             action_zip_path = self.__openwhisk_artifacts_dir / func_name / ".zip"
             os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path} --timeout 300000 --concurrency 10")
 
-        # Create composition
-        composition_name = f"{self.__user_dag.get_user_dag_name()}-composition"
-        composer_config_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.json"
-        os.system(f"source ~/.bashrc && deploy.js {composition_name} {composer_config_path} -w -i")
+        logger.info(":" * 10)
+        logger.info("Deploying OpenWhisk action for each function: SUCCESS")
+        logger.info(":" * 10)
+
+        logger.info(":" * 10)
+        logger.info("Deploying OpenWhisk orchestrator action")
+        logger.info(":" * 10)
+        
+        nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
+        ow_deployer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "deploy.js")
+        os.system(f"{ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
+
+        logger.info(":" * 10)
+        logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
+        logger.info(":" * 10)
+        # -------------------------------------------------------------------------
