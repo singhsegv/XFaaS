@@ -30,7 +30,7 @@ class CSP:
             print(":" * 80, "Generating resources for OpenWhisk Actions")
             private_cloud_deployer.build_resources()
 
-            print(":" * 80, "Generatinng workflow files for OpenWhisk")
+            print(":" * 80, "Generating workflow files for OpenWhisk")
             private_cloud_deployer.build_workflow()
 
             print(":" * 80, "Deploying OpenWhisk")

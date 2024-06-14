@@ -68,8 +68,9 @@ class OpenWhisk:
         self.__openwhisk_artifacts_dir.mkdir(parents=True, exist_ok=True)
         self.__openwhisk_helpers_dir.mkdir(parents=True, exist_ok=True)
         self.__openwhisk_helpers_nodejs_dir.mkdir(parents=True, exist_ok=True)
-
-        print("bp")
+        
+        # Copying the bash script to install a local nodejs copy (used by openwhisk-composer)
+        shutil.copyfile(src=self.__runner_template_dir/"local_nodejs_installer.sh", dst=self.__openwhisk_helpers_dir/"local_nodejs_installer.sh")
     
 
     def __render_runner_template(self, runner_template_dir, function_id, function_name, function_runner_filename):
@@ -174,7 +175,6 @@ class OpenWhisk:
         with open(temp_runner_path, "w") as file:
             file.write(contents)
 
-
         # XFaaS code provided by the user comes as the module name due to
         # import USER_FUNCTION_PLACEHOLDER being replaced by the module name
         final_import_file_src_path = user_fn_path / f"{fn_module_name}.py"
@@ -194,9 +194,8 @@ class OpenWhisk:
 
     def __create_standalone_runners(self):
         """
-        1. The function entrypoint is __main__.py due to OpenWhisk deployment
+        The function entrypoint is __main__.py due to OpenWhisk deployment
         requirements for large library imports
-
         """
         function_metadata_list = self.__user_dag.get_node_param_list()
         function_object_map = self.__user_dag.get_node_object_map()
@@ -239,8 +238,6 @@ class OpenWhisk:
         """
         Generates a js file to send as an input to openwhisk composer.
         See: https://github.com/apache/openwhisk-composer
-
-        TODO: Setup a local npm + node combo with openwhisk-composer library
         """
         composer_file_path = self.__openwhisk_build_dir / f"{file_name_prefix}_workflow_composition.js"
         redis_input_file_path = self.__openwhisk_build_dir / f"{file_name_prefix}_workflow_input.json" # required to allow parallel action in OpenWhisk
@@ -277,9 +274,9 @@ class OpenWhisk:
         1. Creates OpenWhisk's action compatible source code function files
         2. TODO: Creates openwhisk composer js files
         """
-        logger.info("*" * 10)
+        logger.info("*" * 30)
         logger.info("Build Resources: Started")
-        logger.info("*" * 10)
+        logger.info("*" * 30)
 
         logger.info(f"Creating environment for {self.__user_dag.get_user_dag_name()}")
         self.__create_environment()
@@ -290,9 +287,9 @@ class OpenWhisk:
         logger.info(f"Initating openwhisk composer js orchestrator for {self.__user_dag.get_user_dag_name()}")
         self.__create_workflow_orchestrator(self.__user_dag.get_user_dag_name())
 
-        logger.info("*" * 10)
+        logger.info("*" * 30)
         logger.info("Build Resources: Success")
-        logger.info("*" * 10)
+        logger.info("*" * 30)
 
 
     def build_workflow(self):
@@ -305,7 +302,6 @@ class OpenWhisk:
         ------------
         Assumptions:
         ------------
-        - NodeJS is installed -> Right now using 'n' to install nodejs (https://www.npmjs.com/package/n)
         - wsk tool is setup -> User's responsibility
         """
         # Create a zip artifact from each function
@@ -331,30 +327,66 @@ class OpenWhisk:
                     path = file.split("python/")[1]
                     archive.write(filename=file, arcname=os.path.join("python", path))
 
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         logger.info("Installing nodejs and openwhisk-composer")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
 
-        # TODO: if nodejs doesn't exist here
         builder_dir = str(self.__openwhisk_helpers_dir.resolve())
-        builder_path = os.path.join(builder_dir, "builder.sh")
+        builder_path = os.path.join(builder_dir, "local_nodejs_installer.sh")
         nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
-        subprocess.call(["sh", builder_path, nodejs_local_dir])
 
-        logger.info(":" * 10)
+        # Only downloading a local NodeJS copy if one doesn't exist already with required libraries installed
+        ow_composer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "compose.js")
+        if not os.path.exists(ow_composer_binary_path):
+            logger.info("Installing NodeJS using 'https://raw.githubusercontent.com/tj/n/master/bin/n'")
+            nodejs_installation_status = subprocess.run(["sh", builder_path, nodejs_local_dir])
+            
+            if nodejs_installation_status.returncode == 0:
+                logger.info("NodeJS installation success")
+            else:
+                # TODO: Handle me gracefully
+                logger.info("NodeJS installation failure")
+                raise Exception("NodeJS installation failed")
+            
+            # ------------------------------------------------------------------------------------------
+            # Doing a "$ npm install openwhisk-composer" from the local npm binary
+            logger.info("Starting to install openwhisk-composer using npm: See 'https://github.com/apache/openwhisk-composer'")
+            
+            local_npm_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"npm"
+            ow_composer_installation_status = subprocess.run([str(local_npm_binary_path.resolve()), "install", "--prefix", nodejs_local_dir, "openwhisk-composer"])
+            if ow_composer_installation_status.returncode == 0:
+                logger.info("Successfully installed openwhisk-composer")
+            else:
+                # TODO: Handle me gracefully
+                logger.info("openwhisk-composer installation failure")
+                raise Exception("openwhisk-composer installation failed")
+            # ------------------------------------------------------------------------------------------
+        else:
+            logger.info(":" * 30)
+            logger.info("Required local NodeJS already exists in the build directory")
+            logger.info(":" * 30)
+
+        logger.info(":" * 30)
         logger.info("Installing nodejs and openwhisk-composer: SUCCESS")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
 
-        logger.info(":" * 10)
-        logger.info("Creating openwhisk-composer files")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
+        logger.info("Creating workflow composition files using openwhisk-composer")
+        logger.info(":" * 30)
 
         ow_composer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "compose.js")
-        os.system(f"{ow_composer_binary_path} {self.__openwhisk_composer_input_path} -o {self.__openwhisk_composer_output_path}")
+        orchestrator_creation_status = subprocess.run([
+            ow_composer_binary_path, str(self.__openwhisk_composer_input_path.resolve()), 
+            "-o", str(self.__openwhisk_composer_output_path.resolve()),
+        ])
+
+        if orchestrator_creation_status.returncode != 0:
+            logger.info("Orchestrator file creation failed")
+            raise Exception("Orchestrator file creation failed")
         
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         logger.info("Creating openwhisk-composer files: SUCCESS")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
 
 
     def deploy_workflow(self):
@@ -372,9 +404,9 @@ class OpenWhisk:
         3. Throw Exception if wsk command is not working -> Or find a better way to connect to the cluster
         -----
         """
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         logger.info("Deleting any existing OpenWhisk components")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
 
         # ----------------- Existing OpenWhisk components deletion -----------------
         # TODO: Limit this step to current workflow name or some package name
@@ -407,28 +439,28 @@ class OpenWhisk:
 
         # ----------------- New OpenWhisk components creation -----------------
         # Creating the actions manually using the wsk tool
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         logger.info("Deploying OpenWhisk action for each function")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
 
         for func_name in self.__user_dag.get_node_object_map():
             action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/{func_name}"
             action_zip_path = self.__openwhisk_artifacts_dir / func_name / ".zip"
             os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path} --timeout 300000 --concurrency 10")
 
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         logger.info("Deploying OpenWhisk action for each function: SUCCESS")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
 
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         
         nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
         ow_deployer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "deploy.js")
         os.system(f"{ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
 
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
-        logger.info(":" * 10)
+        logger.info(":" * 30)
         # -------------------------------------------------------------------------
