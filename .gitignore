@@ -39,3 +39,5 @@ jmeter.log
 *.csv
 deployments.txt
 *.pdf
+qutils
+qsserializers
