@@ -1,6 +1,7 @@
 serwo/examples/graphAws/build/workflow/aws
 serwo/examples/graphAws/build/workflow/azure
 archive/
+config/
 __pycache__
 sam-build/
 scratchpad/
