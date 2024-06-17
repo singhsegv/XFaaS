@@ -2,6 +2,7 @@ import json
 import copy
 import random
 import string
+import itertools
 import networkx as nx
 from collections import defaultdict
 
@@ -26,6 +27,7 @@ class UserDag:
         for index, node in enumerate(self.__dag_config_data["Nodes"]):
             nodeID = "n" + str(index+1)
             # nodeID = "n" + node["NodeName"] # Uncomment to make debugging easier
+            nodeVar = self._generate_random_variable_name()
 
             self.__nodeIDMap[node["NodeName"]] = nodeID
             self.__nodeIDMap[node["NodeId"]] = nodeID
@@ -48,9 +50,11 @@ class UserDag:
                 CSP=node.get("CSP"),
                 MemoryInMB=node["MemoryInMB"],
                 machine_list=[nodeID],
-                pre="",
-                ret=[f'composer.action("/guest/{workflowName}/{nodeName}")'],
-                var=self._generate_random_variable_name(),
+                var_machine_list=[nodeVar],
+                ret=[f'composer.action("/guest/{workflowName}/{nodeName}")'], # only applicable for leaf nodes (not for sequence/parallel)
+                var=nodeVar,
+                code_generation_done=False,
+                node_type="action", # Can be one of [action/parallel/sequence]
             )
 
         for edge in self.__dag_config_data["Edges"]:
@@ -81,26 +85,6 @@ class UserDag:
 
         return functions_list
     
-    def _get_orchestrator_code_linear_merge(self, graph: nx.DiGraph, nodes):
-        """
-        TODO: Complete me
-        """
-        pre = ""
-        last = nodes[-1]
-        previous_var = None
-        
-        return "", "", ""
-    
-    def _get_orchestrator_code_parallel_merge(self, graph: nx.DiGraph, nodes):
-        """
-        TODO: Complete me
-        """
-        pre = ""
-        last = nodes[-1]
-        previous_var = None
-
-        return "", "", ""
-    
     def _merge_linear_nodes(self, graph: nx.DiGraph, node_list: list):
         """
         Doesn't return anything since operating on deep copy of graphs might get heavy.
@@ -110,12 +94,26 @@ class UserDag:
             return
         
         new_node_machine_list = []
+        new_node_var_machine_list = []
         for node in node_list:
             new_node_machine_list.extend(graph.nodes[node]["machine_list"])
 
+            if graph.nodes[node]["node_type"] == "action":
+                new_node_var_machine_list.extend(graph.nodes[node]["var_machine_list"])
+            else:
+                # new_node_var_machine_list.extend(graph.nodes[node]["var"])
+                if type(graph.nodes[node]["var"]) == str:
+                    new_node_var_machine_list.extend([graph.nodes[node]["var"]])
+                else:
+                    new_node_var_machine_list.extend(graph.nodes[node]["var"])
+
         new_node_id = "n" + str(node_list)
-        pre, ret, var = self._get_orchestrator_code_linear_merge(graph, node_list)
-        graph.add_node(new_node_id,  pre=pre, ret=ret, var=var, machine_list=new_node_machine_list)
+        graph.add_node(
+            new_node_id, var=self._generate_random_variable_name(), 
+            machine_list=new_node_machine_list,
+            var_machine_list=new_node_var_machine_list,
+            node_type="sequence", code_generation_done=False,
+        )
 
         for u, v in list(graph.edges()):
             if v == node_list[0]:
@@ -175,16 +173,31 @@ class UserDag:
             return
         
         new_node_machine_list = []
+        new_node_var_machine_list = []
         for node in node_list:
             new_node_machine_list.append(graph.nodes[node]["machine_list"])
+            # new_node_var_machine_list.append(graph.nodes[node]["var_machine_list"])
+
+            if graph.nodes[node]["node_type"] == "action":
+                new_node_var_machine_list.extend(graph.nodes[node]["var_machine_list"])
+            else:
+                # new_node_var_machine_list.append(graph.nodes[node]["var"])
+                if type(graph.nodes[node]["var"]) == str:
+                    new_node_var_machine_list.extend([graph.nodes[node]["var"]])
+                else:
+                    new_node_var_machine_list.extend(graph.nodes[node]["var"])
 
         # since we are only merging diamonds (same predecessor, same successor) 
         predecessor = list(graph.predecessors(node_list[0]))[0]
         successor = list(graph.successors(node_list[0]))[0]
 
         new_node_id = "n" + str(new_node_machine_list)
-        pre, ret, var = self._get_orchestrator_code_parallel_merge(graph, node_list)
-        graph.add_node(new_node_id, pre=pre, ret=ret, var=var, machine_list=[new_node_machine_list])
+        graph.add_node(
+            new_node_id, var=self._generate_random_variable_name(), 
+            machine_list=[new_node_machine_list],
+            var_machine_list=new_node_var_machine_list,
+            node_type="parallel", code_generation_done=False,
+        )
 
         for node in node_list:
             graph.remove_node(node)
@@ -225,20 +238,73 @@ class UserDag:
             self._merge_parallel_nodes(graph, chain_list)
         
         return
+    
+    def get_updated_nodes(self, dag):
+        """
+        TODO: Change me to a better approach, I won't scale well for bigger graphs.
+        """
+        updated_node_ids = []
+
+        start_node = [node for node in dag.nodes if dag.in_degree(node) == 0][0]
+        bfs_nodes = list(nx.bfs_layers(dag, sources=start_node))
+        bfs_nodes = list(itertools.chain.from_iterable(bfs_nodes))
+        for node_id in bfs_nodes:
+            if not dag.nodes[node_id]["code_generation_done"]:
+                updated_node_ids.append(node_id)
+
+        return updated_node_ids
 
     def get_orchestrator_code(self):
         """
         Breaker of linear and parallel chains.
-        TODO: Actually generate the generated_code from the updated graph
+        TODO: Test me thoroughly
         """
-        output_dag = copy.deepcopy(self.__dag)
+        original_dag = self.__dag
+        output_dag = copy.deepcopy(original_dag) # preserving the original dag
+        generated_code = 'const composer = require("openwhisk-composer");\n\n'        
+        
+        # Creating an action definition for each node of the graph
+        start_node = [node for node in output_dag.nodes if output_dag.in_degree(node) == 0][0]
+        bfs_nodes = list(nx.bfs_layers(output_dag, sources=start_node))
+        bfs_nodes = list(itertools.chain.from_iterable(bfs_nodes))
+        for curr_node in bfs_nodes:
+            generated_code += f"{output_dag.nodes[curr_node]['var']} = {output_dag.nodes[curr_node]['ret'][0]};\n";
+            output_dag.nodes[curr_node]["code_generation_done"] = True
+
+        iteration = 1
         while len(output_dag.nodes()) != 1:
             self._collapse_linear_chains(output_dag)
+            new_linear_nodes = self.get_updated_nodes(output_dag)
+            if len(new_linear_nodes) > 0:
+                generated_code += f"\n// Iteration{iteration}: Sequence\n"
+
+            for new_node in new_linear_nodes:
+                node = output_dag.nodes[new_node]
+                node["code_generation_done"] = True
+
+                sub_node_machines = []
+                for machine in node["var_machine_list"]:
+                    sub_node_machines.append(machine)
+                
+                generated_code += f"{node['var']} = composer.sequence({', '.join(sub_node_machines)});\n";
+
             self._collapse_parallel_chains(output_dag)
+            new_parallel_nodes = self.get_updated_nodes(output_dag)
+            if len(new_parallel_nodes) > 0:
+                generated_code += f"\n// Iteration{iteration}: Parallel\n"
 
-        generated_code = """
-const composer = require("openwhisk-composer");
+            for new_node in new_parallel_nodes:
+                node = output_dag.nodes[new_node]
+                node["code_generation_done"] = True
 
-module.exports = composer.sequence("/guest/graphs/graph_gen", composer.parallel("/guest/graphs/graph_bft", "/guest/graphs/pagerank", "/guest/graphs/graph_mst"), "/guest/graphs/aggregate");
-"""
+                sub_node_machines = []
+                for machine in node["var_machine_list"]:
+                    sub_node_machines.append(machine)
+
+                generated_code += f"{node['var']} = composer.parallel({', '.join(sub_node_machines)});\n";
+            
+            iteration += 1
+
+        generated_code += f"\nmodule.exports = {output_dag.nodes[list(output_dag.nodes)[0]]['var']};\n"
         return generated_code
+    
