@@ -382,6 +382,9 @@ def write_dag_for_partition(user_wf_dir, dagg, part_id, csp, region):
 def run(user_wf_dir, dag_definition_file, benchmark_file, csp,region):
     # user_wf_dir += "/workflow-gen"
     dag_definition_path = f"{user_wf_dir}/{dag_definition_file}"
+    rm_if_exists = f'{user_wf_dir}/partitions'
+    if os.path.exists(rm_if_exists):
+        shutil.rmtree(rm_if_exists)
     user_pinned_nodes = get_user_pinned_nodes()
     xfaas_user_dag = xfaas_init.init(dag_definition_path)
     partition_config = xfaas_optimizer.optimize(xfaas_user_dag,
@@ -392,6 +395,7 @@ def run(user_wf_dir, dag_definition_file, benchmark_file, csp,region):
 
     
     # partition_config = [PartitionPoint("function_name", 2, csp, None, part_id, region)]
+    
 
     wf_id = xfaas_provenance.push_user_dag(dag_definition_path)
     last_partition = partition_config[-1]
