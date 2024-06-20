@@ -352,8 +352,9 @@ class OpenWhisk:
             # Doing a "$ npm install openwhisk-composer" from the local npm binary
             logger.info("Starting to install openwhisk-composer using npm: See 'https://github.com/apache/openwhisk-composer'")
             
+            local_nodejs_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"node"
             local_npm_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"npm"
-            ow_composer_installation_status = subprocess.run([str(local_npm_binary_path.resolve()), "install", "--prefix", nodejs_local_dir, "openwhisk-composer"])
+            ow_composer_installation_status = subprocess.run([str(local_nodejs_binary_path.resolve()), str(local_npm_binary_path.resolve()), "install", "--prefix", nodejs_local_dir, "openwhisk-composer"])
             if ow_composer_installation_status.returncode == 0:
                 logger.info("Successfully installed openwhisk-composer")
             else:
@@ -374,9 +375,11 @@ class OpenWhisk:
         logger.info("Creating workflow composition files using openwhisk-composer")
         logger.info(":" * 30)
 
+        local_nodejs_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"node"
         ow_composer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "compose.js")
         orchestrator_creation_status = subprocess.run([
-            ow_composer_binary_path, str(self.__openwhisk_composer_input_path.resolve()), 
+            local_nodejs_binary_path, ow_composer_binary_path, 
+            str(self.__openwhisk_composer_input_path.resolve()), 
             "-o", str(self.__openwhisk_composer_output_path.resolve()),
         ])
 
@@ -445,7 +448,7 @@ class OpenWhisk:
 
         for func_name in self.__user_dag.get_node_object_map():
             action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/{func_name}"
-            action_zip_path = self.__openwhisk_artifacts_dir / func_name / ".zip"
+            action_zip_path = self.__openwhisk_artifacts_dir / f"{func_name}.zip"
             os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path} --timeout 300000 --concurrency 10")
 
         logger.info(":" * 30)
@@ -457,8 +460,9 @@ class OpenWhisk:
         logger.info(":" * 30)
         
         nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
+        local_nodejs_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"node"
         ow_deployer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "deploy.js")
-        os.system(f"{ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
+        os.system(f"{local_nodejs_binary_path} {ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
 
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
