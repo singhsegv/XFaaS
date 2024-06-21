@@ -26,7 +26,7 @@ analysis/
 stashed/
 serwo/examples/graphAwsFourRps
 serwo/examples/graphAwsMedium
-build
+build/
 *.jsonl
 log_files
 serwo/config
