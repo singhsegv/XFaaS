@@ -247,11 +247,14 @@ class OpenWhisk:
         
         # To allow parallel workflows and other stuff, a redis instance is needed
         # with an input.json file with corresponding redis info
+        # TODO: Change me to be picked up from a config file
         redis_input_file = """
 {
     "$composer": {
         "redis": {
-            "uri": "redis://owdev-redis.openwhisk.svc.cluster.local:6379"
+            "uri": {
+                "url": "redis://owdev-redis.openwhisk.svc.cluster.local:6379"
+            }
         },
         "openwhisk": {
             "ignore_certs": true
