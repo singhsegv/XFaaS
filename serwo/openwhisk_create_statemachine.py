@@ -466,6 +466,9 @@ class OpenWhisk:
         local_nodejs_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"node"
         ow_deployer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "deploy.js")
         os.system(f"{local_nodejs_binary_path} {ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
+        
+        # TODO: Update me to be picked from a config file along with action create calls above
+        os.system(f"wsk -i action update {self.__openwhisk_workflow_orchestrator_action_name} --timeout 300000 --concurrency 10")
 
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
