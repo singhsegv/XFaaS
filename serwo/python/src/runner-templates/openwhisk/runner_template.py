@@ -22,26 +22,6 @@ def get_delta(timestamp):
 
 # Openwhisk entry point
 def main(event):
-    # TODO:
-    # 1. Check if this is correct approach for the entrypoint function of the workflow
-    # 2. Check if this caters the list type usecase too
-    # 3. uuid won't be the desired solution. Check if all this apply in private cloud's case or not
-    if event == None or len(event) == 0:
-        event = {
-            "workflow_instance_id": str(uuid.uuid4()),
-            "request_timestamp": round(time.time() * 1000), # This is most probably wrong
-            "session_id": str(uuid.uuid4()),
-            "deployment_id": str(uuid.uuid4()),
-        }
-
-    # TODO: Check if this helps
-    print("*" * 10)
-    act_id = os.environ.get("__OW_ACTIVATION_ID", "lalala")
-    trans_id = os.environ.get("__OW_TRANSACTION_ID", "lalala")
-    print(act_id)
-    print(act_id)
-    print("*" * 10)    
-
     start_time = round(time.time() * 1000)
     # capturing input payload size
     input_payload_size_bytes = None
