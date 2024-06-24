@@ -39,9 +39,16 @@ class OpenWhisk:
         self.__openwhisk_helpers_dir = self.__openwhisk_build_dir / "helpers"
         self.__openwhisk_helpers_nodejs_dir = self.__openwhisk_helpers_dir / "local_nodejs"
 
+        # OpenWhisk configuration parameters with sensible defaults suggested in OW documentation
+        self.__action_namespace = os.environ.get("OW_ACTION_NS", "guest")
+        self.__action_concurrency = int(os.environ.get("OW_ACTION_CONCURRENCY", 10))
+        self.__action_timeout = int(os.environ.get("OW_ACTION_TIMEOUT", 300000))
+        self.__redis_url = os.environ.get("OW_REDIS_URL", "redis://owdev-redis.openwhisk.svc.cluster.local:6379")
+        self.__ignore_certs = bool(os.environ.get("OW_REDIS_IGNORE_CERTS", 1)) # 1/0 for True or False
+
         # DAG related parameters
         self.__user_dag = UserDag(self.__dag_definition_path)
-        self.__openwhisk_workflow_orchestrator_action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/orchestrator"
+        self.__openwhisk_workflow_orchestrator_action_name = f"/{self.__action_namespace}/{self.__user_dag.get_user_dag_name()}/orchestrator"
         self.__openwhisk_composer_input_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.js"
         self.__openwhisk_composer_output_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.json"
         self.__openwhisk_workflow_redis_input = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_input.json" # required to allow parallel action in OpenWhisk
@@ -240,34 +247,10 @@ class OpenWhisk:
         See: https://github.com/apache/openwhisk-composer
         """
         composer_file_path = self.__openwhisk_build_dir / f"{file_name_prefix}_workflow_composition.js"
-        redis_input_file_path = self.__openwhisk_build_dir / f"{file_name_prefix}_workflow_input.json" # required to allow parallel action in OpenWhisk
 
-        # ------------------------------------------------------------------------------------------------
         generated_code = self.__user_dag.get_orchestrator_code()
-        
-        # To allow parallel workflows and other stuff, a redis instance is needed
-        # with an input.json file with corresponding redis info
-        # TODO: Change me to be picked up from a config file
-        redis_input_file = """
-{
-    "$composer": {
-        "redis": {
-            "uri": {
-                "url": "redis://owdev-redis.openwhisk.svc.cluster.local:6379"
-            }
-        },
-        "openwhisk": {
-            "ignore_certs": true
-        }
-    }
-}
-"""
-        # ------------------------------------------------------------------------------------------------
         with open(composer_file_path, "w") as f:
             f.write(generated_code)
-        
-        with open(redis_input_file_path, "w") as f:
-            f.write(redis_input_file)
     
 
     def build_resources(self):
@@ -417,7 +400,7 @@ class OpenWhisk:
         # ----------------- Existing OpenWhisk components deletion -----------------
         # TODO: Limit this step to current workflow name or some package name
         for node_name in self.__user_dag.get_node_object_map():
-            curr_action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/{node_name}"
+            curr_action_name = f"/{self.__action_namespace}/{self.__user_dag.get_user_dag_name()}/{node_name}"
             try:
                 os.system(f"wsk -i action delete {curr_action_name}")
             except Exception as e:
@@ -450,9 +433,9 @@ class OpenWhisk:
         logger.info(":" * 30)
 
         for func_name in self.__user_dag.get_node_object_map():
-            action_name = f"/guest/{self.__user_dag.get_user_dag_name()}/{func_name}"
+            action_name = f"/{self.__action_namespace}/{self.__user_dag.get_user_dag_name()}/{func_name}"
             action_zip_path = self.__openwhisk_artifacts_dir / f"{func_name}.zip"
-            os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path} --timeout 300000 --concurrency 10")
+            os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency}")
 
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk action for each function: SUCCESS")
@@ -467,8 +450,22 @@ class OpenWhisk:
         ow_deployer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "deploy.js")
         os.system(f"{local_nodejs_binary_path} {ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
         
-        # TODO: Update me to be picked from a config file along with action create calls above
-        os.system(f"wsk -i action update {self.__openwhisk_workflow_orchestrator_action_name} --timeout 300000 --concurrency 10")
+        ignore_certs = "false"
+        if self.__ignore_certs:
+            ignore_certs = "true"
+
+        # Hackish way to create this complex string input for orchestrator function
+        workflow_update_cmd = f"wsk -i action update {self.__openwhisk_workflow_orchestrator_action_name} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency}"
+        workflow_update_cmd += "--param '$composer' '{"
+        workflow_update_cmd += '"redis":{"uri":{"url":"'
+        workflow_update_cmd += self.__redis_url
+        workflow_update_cmd += '"}'
+        workflow_update_cmd += '},"openwhisk":{"ignore_certs":'
+        workflow_update_cmd += ignore_certs
+        workflow_update_cmd += '}'
+        workflow_update_cmd += "}'"
+
+        os.system(workflow_update_cmd)
 
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
