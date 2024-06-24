@@ -1,9 +1,9 @@
 from azure.storage.queue import QueueClient
 import json
 from python.src.utils.classes.commons.serwo_objects import SerWOObject
-import os, uuid
+# import os, uuid
 import logging
-import boto3
+# import boto3
  
 connect_str = "CONNECTION_STRING"
 queue_name = "QUEUE_NAME"
