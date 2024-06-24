@@ -9,9 +9,7 @@ connect_str = "CONNECTION_STRING"
 queue_name = "QUEUE_NAME"
 # csp = "COLL_CSP"
  
-queue = QueueClient.from_connection_string(
-        conn_str=connect_str, queue_name=queue_name
-    )
+queue = boto3.client("sqs")
  
  
 def user_function(serwoObject) -> SerWOObject:
@@ -23,7 +21,7 @@ def user_function(serwoObject) -> SerWOObject:
         fin_dict["data"] = data
         fin_dict["metadata"] = metadata
         logging.info("Fin dict - "+str(fin_dict))
-        queue.send_message(json.dumps(fin_dict))
+        queue.send_message(MessageBody=json.dumps(fin_dict), QueueUrl=connect_str)
         # data = {"body": "success: OK"}
         return SerWOObject(body=serwoObject.get_body())
     except Exception as e:

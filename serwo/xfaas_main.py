@@ -71,12 +71,12 @@ def add_collect_logs(dag_definition_path,user_wf_dir, xfaas_user_dag,region):
     
     # region = 'centralindia'
     
-    collect_logs_dir = f'{project_dir}/templates/azure/predefined-functions/CollectLogs'
     new_collect_logs_dir = f'{user_wf_dir}/CollectLogs'
-   
+    collect_logs_dir=''
     queue_name = randomString(5)
     
     if csp=="azure":
+        collect_logs_dir = f'{project_dir}/templates/azure/predefined-functions/CollectLogs'
         print('creating xfaas logging queue')
         resource_group_name = f"xfaasLog{region}"
         storage_account_name = f"xfaaslog{region}"
@@ -126,6 +126,7 @@ def add_collect_logs(dag_definition_path,user_wf_dir, xfaas_user_dag,region):
         fin_dict = {'queue_name' : queue_name, 'connection_string' : jsson['connectionString'] , 'storage_account' : storage_account_name, 'group':resource_group_name}
     
     elif csp=="aws":
+        collect_logs_dir = f'{project_dir}/templates/aws/predefined-functions/CollectLogs'
         queue_creation_command = f"aws sqs create-queue --queue-name {queue_name}"
         stream = os.popen(queue_creation_command)
         output = stream.read()
@@ -139,7 +140,7 @@ def add_collect_logs(dag_definition_path,user_wf_dir, xfaas_user_dag,region):
     
     connection_string_template = 'CONNECTION_STRING'
     queue_name_template = 'QUEUE_NAME'
-    coll_csp_template="COLL_CSP"
+    # coll_csp_template="COLL_CSP"
     ##open the file and replace the connection string and queue name
     with open(f'{new_collect_logs_dir}/func.py', 'r') as file :
         filedata = file.read()
