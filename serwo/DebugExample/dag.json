@@ -1,123 +1,131 @@
 {
-    "WorkflowName": "MathFunctions",
+    "WorkflowName": "Debug1",
     "Nodes": [
       {
         "NodeId": "1",
-        "NodeName": "Source",
-        "Path": "examples/MathFunctionsRevisedAz/src/Source",
+        "NodeName": "Node1",
+        "Path": "examples/Debugging/Func",
         "EntryPoint": "source.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "2",
-        "NodeName": "GenerateInteger",
-        "Path": "examples/MathFunctionsRevisedAz/src/GenerateInteger",
+        "NodeName": "Node2",
+        "Path": "examples/Debugging/Func",
         "EntryPoint": "random_int_gen.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "3",
-        "NodeName": "GenerateList",
-        "Path": "examples/MathFunctionsRevisedAz/src/GenerateList",
+        "NodeName": "Node3",
+        "Path": "examples/MathFunctionsRevisedAws/src/GenerateList",
         "EntryPoint": "random_list_gen.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "4",
-        "NodeName": "GenerateMatrixA",
-        "Path": "examples/MathFunctionsRevisedAz/src/GenerateMatrixA",
+        "NodeName": "Node4",
+        "Path": "examples/MathFunctionsRevisedAws/src/GenerateMatrixA",
         "EntryPoint": "random_matrix_gen.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "5",
-        "NodeName": "GenerateMatrixB",
-        "Path": "examples/MathFunctionsRevisedAz/src/GenerateMatrixB",
+        "NodeName": "Node5",
+        "Path": "examples/MathFunctionsRevisedAws/src/GenerateMatrixB",
         "EntryPoint": "random_matrix_gen.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "6",
-        "NodeName": "Sine",
-        "Path": "examples/MathFunctionsRevisedAz/src/Sine",
+        "NodeName": "Node6",
+        "Path": "examples/MathFunctionsRevisedAws/src/Sine",
         "EntryPoint": "find_sine.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "7",
-        "NodeName": "Cosine",
-        "Path": "examples/MathFunctionsRevisedAz/src/Cosine",
+        "NodeName": "Node7",
+        "Path": "examples/MathFunctionsRevisedAws/src/Cosine",
         "EntryPoint": "find_cosine.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "8",
-        "NodeName": "Factors",
-        "Path": "examples/MathFunctionsRevisedAz/src/Factors",
+        "NodeName": "Node8",
+        "Path": "examples/MathFunctionsRevisedAws/src/Factors",
         "EntryPoint": "find_factors.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "9",
-        "NodeName": "FastFourierTransform",
-        "Path": "examples/MathFunctionsRevisedAz/src/FastFourierTransform",
+        "NodeName": "Node9",
+        "Path": "examples/MathFunctionsRevisedAws/src/FastFourierTransform",
         "EntryPoint": "fft.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "10",
-        "NodeName": "MatrixMultiplication",
-        "Path": "examples/MathFunctionsRevisedAz/src/MatrixMultiplication",
+        "NodeName": "Node10",
+        "Path": "examples/MathFunctionsRevisedAws/src/MatrixMultiplication",
         "EntryPoint": "multiply_matrices.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "11",
-        "NodeName": "LinPack",
-        "Path": "examples/MathFunctionsRevisedAz/src/LinPack",
+        "NodeName": "Node11",
+        "Path": "examples/MathFunctionsRevisedAws/src/LinPack",
         "EntryPoint": "linpack.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "12",
-        "NodeName": "Aggregator1",
-        "Path": "examples/MathFunctionsRevisedAz/src/Aggregator",
+        "NodeName": "Node12",
+        "Path": "examples/MathFunctionsRevisedAws/src/Aggregator",
         "EntryPoint": "aggr.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "13",
-        "NodeName": "Aggregator4",
-        "Path": "examples/MathFunctionsRevisedAz/src/Aggregator",
+        "NodeName": "Node13",
+        "Path": "examples/MathFunctionsRevisedAws/src/Aggregator",
         "EntryPoint": "aggr.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "14",
-        "NodeName": "Aggregator2",
-        "Path": "examples/MathFunctionsRevisedAz/src/Aggregator",
+        "NodeName": "Node1",
+        "Path": "examples/MathFunctionsRevisedAws/src/Aggregator",
         "EntryPoint": "aggr.py",
         "CSP": "NA",
         "MemoryInMB": 256
       },
       {
         "NodeId": "15",
-        "NodeName": "Aggregator3",
-        "Path": "examples/MathFunctionsRevisedAz/src/Aggregator",
+        "NodeName": "Node14",
+        "Path": "examples/MathFunctionsRevisedAws/src/Aggregator",
         "EntryPoint": "aggr.py",
+        "CSP": "NA",
+        "MemoryInMB": 256
+      },
+      {
+        "NodeId": "16",
+        "NodeName": "Node15",
+        "Path": "examples/MathFunctionsRevisedAws/src/CollectLogsMathAws",
+        "EntryPoint": "func.py",
         "CSP": "NA",
         "MemoryInMB": 256
       }
@@ -164,6 +172,9 @@
         },
         {
           "Aggregator3": ["Aggregator4"]
+        },
+        {
+          "Aggregator4" : ["CollectLogsMathAws"]
         }
     ]
   }

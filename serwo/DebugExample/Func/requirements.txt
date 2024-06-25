@@ -1,0 +1,5 @@
+azure-storage-queue
+objsize
+psutil
+py-cpuinfo
+requests
