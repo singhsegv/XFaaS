@@ -56,23 +56,23 @@ def create_actions(lim):
         action_zip_path = os.path.abspath(os.path.join(".", "artifacts", "Func.zip"))
         
         os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path}")
-        workflow_update_cmd = f"wsk -i action update {action_name} --timeout 300000 --concurrency 10"
-        workflow_update_cmd += " --param '$composer' '{"
-        workflow_update_cmd += '"redis":{"uri":{"url":"'
-        workflow_update_cmd += "redis://owdev-redis.openwhisk.svc.cluster.local:6379"
-        workflow_update_cmd += '"}'
-        workflow_update_cmd += '},"openwhisk":{"ignore_certs":'
-        workflow_update_cmd += "true"
-        workflow_update_cmd += '}'
-        workflow_update_cmd += "}'"
+        # workflow_update_cmd = f"wsk -i action update {action_name} --timeout 300000 --concurrency 10"
+        # workflow_update_cmd += " --param '$composer' '{"
+        # workflow_update_cmd += '"redis":{"uri":{"url":"'
+        # workflow_update_cmd += "redis://owdev-redis.openwhisk.svc.cluster.local:6379"
+        # workflow_update_cmd += '"}'
+        # workflow_update_cmd += '},"openwhisk":{"ignore_certs":'
+        # workflow_update_cmd += "true"
+        # workflow_update_cmd += '}'
+        # workflow_update_cmd += "}'"
 
-        try:
-            os.system(workflow_update_cmd)
-        except Exception as e:
-            print("*" * 30)
-            print("Error in updating action")
-            print(e)
-            print("*" * 30)
+        # try:
+        #     os.system(workflow_update_cmd)
+        # except Exception as e:
+        #     print("*" * 30)
+        #     print("Error in updating action")
+        #     print(e)
+        #     print("*" * 30)
 
 def main():
     create_artifact()
