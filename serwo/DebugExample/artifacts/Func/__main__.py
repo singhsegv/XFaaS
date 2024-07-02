@@ -20,6 +20,3 @@ def main(event):
     return {
         "status": "success"
     }
-
-if __name__ == "__main__":
-    print("Main Method: Nothing is executed")
