@@ -1,0 +1,70 @@
+{
+    "composition": {
+        "type": "sequence",
+        "components": [
+            {
+                "type": "action",
+                "name": "/guest/debug/node_0",
+                "path": "[0]"
+            },
+            {
+                "type": "sequence",
+                "components": [
+                    {
+                        "type": "action",
+                        "name": "/guest/debug/node_1",
+                        "path": "[1][0]"
+                    },
+                    {
+                        "type": "action",
+                        "name": "/guest/debug/node_2",
+                        "path": "[1][1]"
+                    },
+                    {
+                        "type": "action",
+                        "name": "/guest/debug/node_3",
+                        "path": "[1][2]"
+                    }
+                ],
+                "path": "[1]"
+            },
+            {
+                "type": "action",
+                "name": "/guest/debug/node_4",
+                "path": "[2]"
+            }
+        ],
+        "path": ""
+    },
+    "ast": {
+        "type": "sequence",
+        "components": [
+            {
+                "type": "action",
+                "name": "/guest/debug/node_0"
+            },
+            {
+                "type": "sequence",
+                "components": [
+                    {
+                        "type": "action",
+                        "name": "/guest/debug/node_1"
+                    },
+                    {
+                        "type": "action",
+                        "name": "/guest/debug/node_2"
+                    },
+                    {
+                        "type": "action",
+                        "name": "/guest/debug/node_3"
+                    }
+                ]
+            },
+            {
+                "type": "action",
+                "name": "/guest/debug/node_4"
+            }
+        ]
+    },
+    "version": "0.12.0"
+}
