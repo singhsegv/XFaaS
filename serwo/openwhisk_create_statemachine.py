@@ -496,7 +496,7 @@ class OpenWhisk:
                 "Decription": f"Run 'wsk -i action invoke {self.__openwhisk_workflow_orchestrator_action_name}' to start the workflow"
             }
             
-            f.write(json.dumps(output))
+            f.write(json.dumps(output, indent=4))
 
         logger.info(":" * 30)
         logger.info("Writing output json resource file: SUCCESS")
