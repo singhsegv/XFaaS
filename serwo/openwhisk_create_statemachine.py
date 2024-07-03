@@ -1,5 +1,6 @@
 import os
 import glob
+import json
 import shutil
 import zipfile
 import subprocess
@@ -52,7 +53,6 @@ class OpenWhisk:
         self.__openwhisk_workflow_orchestrator_action_name = f"/{self.__action_namespace}/{self.__user_dag.get_user_dag_name()}/orchestrator"
         self.__openwhisk_composer_input_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.js"
         self.__openwhisk_composer_output_path = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_composition.json"
-        self.__openwhisk_workflow_redis_input = self.__openwhisk_build_dir / f"{self.__user_dag.get_user_dag_name()}_workflow_input.json" # required to allow parallel action in OpenWhisk
 
 
     def __create_environment(self):
@@ -76,6 +76,7 @@ class OpenWhisk:
         self.__openwhisk_artifacts_dir.mkdir(parents=True, exist_ok=True)
         self.__openwhisk_helpers_dir.mkdir(parents=True, exist_ok=True)
         self.__openwhisk_helpers_nodejs_dir.mkdir(parents=True, exist_ok=True)
+        self.__serwo_resources_dir.mkdir(parents=True, exist_ok=True)
         
         # Copying the bash script to install a local nodejs copy (used by openwhisk-composer)
         shutil.copyfile(src=self.__runner_template_dir/"local_nodejs_installer.sh", dst=self.__openwhisk_helpers_dir/"local_nodejs_installer.sh")
@@ -482,5 +483,22 @@ class OpenWhisk:
         
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
+        logger.info(":" * 30)
+
+        logger.info(":" * 30)
+        logger.info("Writing output json resource file")
+        logger.info(":" * 30)
+
+        output_resource_file_path = self.__serwo_resources_dir / f"openwhisk-{self.__part_id}.json"
+        with open(output_resource_file_path, "w") as f:
+            output = {
+                "WorkflowEntrypoint": self.__openwhisk_workflow_orchestrator_action_name,
+                "Decription": f"Run 'wsk -i action invoke {self.__openwhisk_workflow_orchestrator_action_name}' to start the workflow"
+            }
+            
+            f.write(json.dumps(output))
+
+        logger.info(":" * 30)
+        logger.info("Writing output json resource file: SUCCESS")
         logger.info(":" * 30)
         # -------------------------------------------------------------------------
