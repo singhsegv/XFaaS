@@ -22,6 +22,9 @@ class Function:
 
     def get_module_name(self):
         return self._module_name
+    
+    def get_memory(self):
+        return self._memory
 
     def get_id(self):
         return self._id

@@ -126,6 +126,3 @@ def main(event):
         return response
     return response
 
-
-if __name__ == "__main__":
-    print("Main Method: Nothing is executed")

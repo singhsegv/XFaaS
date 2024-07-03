@@ -40,11 +40,12 @@ class OpenWhisk:
         self.__openwhisk_helpers_nodejs_dir = self.__openwhisk_helpers_dir / "local_nodejs"
 
         # OpenWhisk configuration parameters with sensible defaults suggested in OW documentation
-        self.__action_namespace = os.environ.get("OW_ACTION_NS", "guest")
-        self.__action_concurrency = int(os.environ.get("OW_ACTION_CONCURRENCY", 10))
-        self.__action_timeout = int(os.environ.get("OW_ACTION_TIMEOUT", 300000))
-        self.__redis_url = os.environ.get("OW_REDIS_URL", "redis://owdev-redis.openwhisk.svc.cluster.local:6379")
-        self.__ignore_certs = bool(os.environ.get("OW_REDIS_IGNORE_CERTS", 1)) # 1/0 for True or False
+        self.__action_namespace = os.environ.get("XFAAS_OW_ACTION_NS", "guest")
+        self.__action_concurrency = int(os.environ.get("XFAAS_OW_ACTION_CONCURRENCY", 10))
+        self.__action_timeout = int(os.environ.get("XFAAS_OW_ACTION_TIMEOUT", 300000))
+        self.__action_memory = int(os.environ.get("XFAAS_OW_ACTION_MEMORY", 256)) # This is only used for orchestrator action for now
+        self.__redis_url = os.environ.get("XFAAS_OW_REDIS_URL", "redis://owdev-redis.openwhisk.svc.cluster.local:6379")
+        self.__ignore_certs = bool(os.environ.get("XFAAS_OW_REDIS_IGNORE_CERTS", 1)) # 1/0 for True or False
 
         # DAG related parameters
         self.__user_dag = UserDag(self.__dag_definition_path)
@@ -398,7 +399,6 @@ class OpenWhisk:
         logger.info(":" * 30)
 
         # ----------------- Existing OpenWhisk components deletion -----------------
-        # TODO: Limit this step to current workflow name or some package name
         for node_name in self.__user_dag.get_node_object_map():
             curr_action_name = f"/{self.__action_namespace}/{self.__user_dag.get_user_dag_name()}/{node_name}"
             try:
@@ -435,7 +435,17 @@ class OpenWhisk:
         for func_name in self.__user_dag.get_node_object_map():
             action_name = f"/{self.__action_namespace}/{self.__user_dag.get_user_dag_name()}/{func_name}"
             action_zip_path = self.__openwhisk_artifacts_dir / f"{func_name}.zip"
-            os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency}")
+
+            # This overrides the default configuration set from the environment at an action level from the provided DAG.
+            memory_in_mb = self.__user_dag.get_node_object_map()[func_name].get_memory()
+
+            try:
+                os.system(f"wsk -i action create {action_name} --kind python:3 {action_zip_path} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency} --memory {memory_in_mb}")
+            except Exception as e:
+                print("X" * 20)
+                print(f"Action creation command failed for {action_name}")
+                print(e)
+                print("X" * 20)
 
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk action for each function: SUCCESS")
@@ -455,18 +465,21 @@ class OpenWhisk:
             ignore_certs = "true"
 
         # Hackish way to create this complex string input for orchestrator function
-        workflow_update_cmd = f"wsk -i action update {self.__openwhisk_workflow_orchestrator_action_name} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency}"
-        workflow_update_cmd += "--param '$composer' '{"
-        workflow_update_cmd += '"redis":{"uri":{"url":"'
+        workflow_update_cmd = f"wsk -i action update {self.__openwhisk_workflow_orchestrator_action_name} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency} --memory {self.__action_memory}"
+        workflow_update_cmd += " --param '$composer' '{"
+        workflow_update_cmd += '"redis":{"uri":"'
         workflow_update_cmd += self.__redis_url
-        workflow_update_cmd += '"}'
-        workflow_update_cmd += '},"openwhisk":{"ignore_certs":'
+        workflow_update_cmd += '"},"openwhisk":{"ignore_certs":'
         workflow_update_cmd += ignore_certs
         workflow_update_cmd += '}'
         workflow_update_cmd += "}'"
 
-        os.system(workflow_update_cmd)
-
+        try:
+            os.system(workflow_update_cmd)
+        except Exception as e:
+            print("Workflow action updation command failed")
+            print(e)
+        
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
         logger.info(":" * 30)
