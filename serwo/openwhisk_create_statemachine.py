@@ -42,7 +42,7 @@ class OpenWhisk:
 
         # OpenWhisk configuration parameters with sensible defaults suggested in OW documentation
         self.__action_namespace = os.environ.get("XFAAS_OW_ACTION_NS", "guest")
-        self.__action_concurrency = int(os.environ.get("XFAAS_OW_ACTION_CONCURRENCY", 10))
+        self.__action_concurrency = int(os.environ.get("XFAAS_OW_ACTION_CONCURRENCY", 1))
         self.__action_timeout = int(os.environ.get("XFAAS_OW_ACTION_TIMEOUT", 300000))
         self.__action_memory = int(os.environ.get("XFAAS_OW_ACTION_MEMORY", 256)) # This is only used for orchestrator action for now
         self.__redis_url = os.environ.get("XFAAS_OW_REDIS_URL", "redis://owdev-redis.openwhisk.svc.cluster.local:6379")

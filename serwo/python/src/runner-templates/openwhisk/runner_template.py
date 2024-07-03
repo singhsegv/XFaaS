@@ -22,13 +22,24 @@ def get_delta(timestamp):
 
 # Openwhisk entry point
 def main(event):
+    # For the first function of the workflow iff it is empty
+    if event is None or len(event) == 0:
+        event = {
+            "workflow_instance_id": str(uuid.uuid4()),
+            "request_timestamp": round(time.time() * 1000),
+            "session_id": str(uuid.uuid4()),
+            "deployment_id": str(uuid.uuid4()),
+        }
+
     start_time = round(time.time() * 1000)
     # capturing input payload size
     input_payload_size_bytes = None
 
-    if isinstance(event, list):
+    # Case of a fan-in from multiple actions.
+    # Note: Sending 'value' at the first level can cause an edge case bug
+    if "value" in event and isinstance(event["value"], list):
         # TODO: exception handling
-        serwo_request_object = build_serwo_list_object(event)
+        serwo_request_object = build_serwo_list_object(event["value"])
 
         # Calculate input payload size
         input_payload_size_bytes = sum([objsize.get_deep_size(x.get_body()) for x in serwo_request_object.get_objects()])
