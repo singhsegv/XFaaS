@@ -160,12 +160,12 @@ class OpenWhisk:
         self.__append_xfaas_default_requirements(dst_requirements_path)
 
         # place the dependencies folder from the user function path if it exists
-        # if os.path.exists(user_fn_path / "dependencies"):
-        #     shutil.copytree(
-        #         user_fn_path / "dependencies", 
-        #         dst_fn_dir / "dependencies", 
-        #         dirs_exist_ok=True
-        #     )
+        if os.path.exists(user_fn_path / "dependencies"):
+            shutil.copytree(
+                user_fn_path / "dependencies", 
+                dst_fn_dir / "dependencies", 
+                dirs_exist_ok=True
+            )
 
         logger.info(f"Moving xfaas boilerplate for {fn_name}")
         shutil.copytree(src=self.__serwo_utils_dir, dst=dst_fn_dir / "python", dirs_exist_ok=True)
@@ -314,6 +314,11 @@ class OpenWhisk:
                 for file in glob.glob(xfaas_folder_path, recursive=True):
                     path = file.split("python/")[1]
                     archive.write(filename=file, arcname=os.path.join("python", path))
+
+                dependencies_folder_path = str(self.__openwhisk_functions_dir/func_name/"dependencies"/"**"/"*")
+                for file in glob.glob(dependencies_folder_path, recursive=True):
+                    path = file.split("dependencies/")[1]
+                    archive.write(filename=file, arcname=os.path.join("dependencies", path))
 
         logger.info(":" * 30)
         logger.info("Installing nodejs and openwhisk-composer")
