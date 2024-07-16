@@ -1,16 +1,13 @@
-# from azure.storage.queue import QueueClient
 import json
 from python.src.utils.classes.commons.serwo_objects import SerWOObject
-# import os, uuid
 import logging
 import boto3
  
 connect_str = "CONNECTION_STRING"
 queue_name = "QUEUE_NAME"
-# csp = "COLL_CSP"
  
 queue = boto3.client("sqs")
- 
+
  
 def user_function(serwoObject) -> SerWOObject:
     try:
