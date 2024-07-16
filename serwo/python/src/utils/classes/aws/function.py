@@ -11,8 +11,8 @@ class Function:
         self._module_name = end_point.split(".")[0]
         self._memory = memory
         # TODO - add function id
-        self._isasync = False
-        self._iscontainerised=False
+        self._is_async = False
+        self._is_containerised = False
 
     def get_id(self):
         return self._id
@@ -50,13 +50,15 @@ class Function:
     def get_memory_in_mb(self):
         return self._memory
 
-    def set_isasync(self):
-        self._isasync = True
+    def set_is_async(self, value):
+        self._is_async = value
     
-    def get_isasync(self):
-        return self._isasync
+    def get_is_async(self):
+        return self._is_async
     
-    def set_iscontainerised(self):
-        self._iscontainerised =True
-    def get_iscontainerised(self):
-        return self._iscontainerised 
+    def set_is_containerised(self, value):
+        self._is_containerised = value
+
+    def get_is_containerised(self):
+        return self._is_containerised
+     

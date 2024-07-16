@@ -26,30 +26,29 @@ parser = argparse.ArgumentParser(
     description="What the program does",
     epilog="Text at the bottom of help",
 )
+
 parser.add_argument("--csp",dest='csp',type=str,help="CSP name")
 parser.add_argument("--region",dest='region',type=str,help="Region name")
 parser.add_argument("--wf-user-directory",dest='wf_user_directory',type=str,help="Workflow user directory")
 parser.add_argument("--dag-benchmark",dest='dag_benchmark',type=str,help="Path DAG Benchmark")
 parser.add_argument("--dag-file-name",dest='dag_filename',type=str,help="DAG FILE NAME")
-parser.add_argument("--is-async",dest='is_async',type=str,help="Is Async Fn",default=0)
-# parser.add_argument("--is-containerbased-aws",dest='is_containerbasedaws',type=str,help="Is Async Fn",default=0)
-project_dir = pathlib.Path(__file__).parent.resolve()
 
+project_dir = pathlib.Path(__file__).parent.resolve()
 
 args = parser.parse_args()
     
-# is_containerbasedaws = bool(int(args.is_containerbasedaws))
 USER_DIR = args.wf_user_directory
-DAG_DEFINITION_FILE =  args.dag_filename
-
+DAG_DEFINITION_FILE = args.dag_filename
+BENCHMARK_FILE = args.dag_benchmark
 DAG_DEFINITION_PATH = f"{USER_DIR}/{DAG_DEFINITION_FILE}"
-BENCHMARK_FILE =  args.dag_benchmark
+
 benchmark_path = f'{USER_DIR}/{BENCHMARK_FILE}'
+
 csp = args.csp
 region = args.region
 part_id = "test"
-def get_user_pinned_nodes():
 
+def get_user_pinned_nodes():
     config = json.loads(open(f'{project_dir}/config/xfaas_user_config.json', 'r').read())
     if "user_pinned_nodes" in config:
         return config['user_pinned_nodes']
@@ -182,81 +181,16 @@ def add_collect_logs(dag_definition_path,user_wf_dir, xfaas_user_dag,region, par
     
     with open(f'{user_wf_dir}/dag.json', 'w') as file:
         file.write(json.dumps(dag, indent=4))
+
     nx_dag.add_node(node_dict['NodeId'], **node_dict)
     nx_dag.add_edge(sink_node,node_dict['NodeId'])
-
     
     return fin_dict
 
-# This Is going to update refractor-dag.json by adding waiting for x sec mechanism. Now we have shifted to another logic
-# def add_async_waitXfn(dag_path,user_wf_dir,dag_refractored_path):
+def swap(a, b):
+    return b, a
 
-#     data = json.load(open(dag_path))
-#     fns_data = data['Nodes']
-#     async_fn_name_list=set()
-    
-#     WaitXSeconds_template_dir= f'{project_dir}/templates/azure/predefined-functions/WaitXSeconds'
-#     new_WaitXSeconds_template_dir=f'{user_wf_dir}/WaitXSeconds'
-#     for node in fns_data:
-#         if "IsAsync" in node and node["IsAsync"]:
-#             async_fn_name_list.add(node["NodeName"])
-    
-#     WaitXSeconds_node_dict = {
-#         "NodeId": "252",
-#         "NodeName": "WaitXSeconds",
-#         "Path": new_WaitXSeconds_template_dir,
-#         "EntryPoint": "WaitXSeconds.py",
-#         "CSP": "NA",
-#         "MemoryInMB": 128
-#     }
-
-#     # Here we gonna copy our WaitXSeconds template to our build directory
-#     try:
-#         # Create the new directory if it does not exist
-#         if not os.path.exists(new_WaitXSeconds_template_dir):
-#             os.makedirs(new_WaitXSeconds_template_dir)
-
-#         # Copy all files from the current directory to the new directory
-#         for filename in os.listdir(WaitXSeconds_template_dir):
-#             print("filename to be copied",filename)
-#             file_path = os.path.join(WaitXSeconds_template_dir, filename)
-#         # Check if it's a file and not a directory
-#             if os.path.isfile(file_path):
-#                 shutil.copy(file_path, new_WaitXSeconds_template_dir)
-#     except Exception as e:
-#         print(e)
-#         print("Not able to copy WaitXSeconds file to directory")
-
-#     node_id_to_check = "252"
-#     node_exists = any(node["NodeId"] == node_id_to_check for node in data['Nodes'])
-#     # print("node_exists:",node_exists)
-#     if len(async_fn_name_list)>0:
-#         if not node_exists:
-#             data['Nodes'].append(WaitXSeconds_node_dict)
-
-#     for set_item in async_fn_name_list:
-#         # set_item = c_set_item[1:-1]
-#         for node in data['Edges']:
-#             # print(node,set_item)
-#             if set_item in node:
-#                 # print("node found")
-#                 current_edge_data=node[set_item]
-#                 node[set_item]=["WaitXSeconds"]
-#                 data['Edges'].append({"WaitXSeconds":current_edge_data})
-#         # print(set_item)
-#         # print(type(set_item))
-            
-
-#     #Writing into dag-refractor.json
-#     json_string = json.dumps(data, indent=4)    
-#     file_path = dag_refractored_path
-#     with open(file_path, "w") as json_file:
-#         json_file.write(json_string)
-
-def swap(a,b):
-    return b,a
 def generate_new_dags(partition_config, xfaas_user_dag, user_wf_dir, dag_definition_path):
-    
     src_node = None
     sink_node = None
     nx_dag = xfaas_user_dag.get_dag()
@@ -278,7 +212,6 @@ def generate_new_dags(partition_config, xfaas_user_dag, user_wf_dir, dag_definit
             start_node_id = node
         if nx_dag.nodes[node]['NodeName'] == end_node:
             end_node_id = node
-
    
     top_sort_nodes = list(nx.topological_sort(nx_dag))
     
@@ -387,23 +320,20 @@ def write_dag_for_partition(user_wf_dir, dagg, part_id, csp, region):
         file.write(json.dumps(dagg, indent=4))
         
 
-def run(user_wf_dir, dag_definition_file, benchmark_file, csp,region):
+def run(user_wf_dir, dag_definition_file, benchmark_file, csp, region):
     # user_wf_dir += "/workflow-gen"
     dag_definition_path = f"{user_wf_dir}/{dag_definition_file}"
     rm_if_exists = f'{user_wf_dir}/partitions'
     if os.path.exists(rm_if_exists):
         shutil.rmtree(rm_if_exists)
+
     user_pinned_nodes = get_user_pinned_nodes()
     xfaas_user_dag = xfaas_init.init(dag_definition_path)
-    partition_config = xfaas_optimizer.optimize(xfaas_user_dag,
-                                                user_pinned_nodes, benchmark_path)
-
+    partition_config = xfaas_optimizer.optimize(xfaas_user_dag, user_pinned_nodes, benchmark_file)
 
     generate_new_dags(partition_config, xfaas_user_dag, user_wf_dir, dag_definition_path)
 
-    
-    # partition_config = [PartitionPoint("function_name", 2, csp, None, part_id, region)]
-    
+    # partition_config = [PartitionPoint("function_name", 2, csp, None, part_id, region)]    
 
     wf_id = xfaas_provenance.push_user_dag(dag_definition_path)
     last_partition = partition_config[-1]
@@ -420,11 +350,14 @@ def run(user_wf_dir, dag_definition_file, benchmark_file, csp,region):
     xfaas_resource_generator.generate(user_wf_dir, partition_config,"dag.json")
     # xfaas_provenance.generate_provenance_artifacts(user_wf_dir,wf_id,refactored_wf_id,wf_deployment_id,csp,region,part_id,queue_details)
 
-    return '', '', ''
     return wf_id, refactored_wf_id, wf_deployment_id
    
 
 if __name__ == '__main__':
-
-    wf_id, refactored_wf_id, wf_deployment_id = run(f'{USER_DIR}', DAG_DEFINITION_FILE, BENCHMARK_FILE, csp,region)
-    
+    wf_id, refactored_wf_id, wf_deployment_id = run(f'{USER_DIR}', DAG_DEFINITION_FILE, benchmark_path, csp, region)
+    print("*" * 20)
+    print("Done with the main function")
+    print("Workflow ID: ", wf_id)
+    print("Refactored Workflow ID: ", refactored_wf_id)
+    print("Deployment ID: ", wf_deployment_id)
+    print("*" * 20)

@@ -18,6 +18,7 @@ def extract_var(input_str):
     else:
         first_argument = None
         second_argument = None
+
     first_argument='"'+str(first_argument)+'"'
     # print("Variable Name:", variable_name)
     # print("First Argument:", first_argument)
@@ -63,31 +64,32 @@ def find_var(orch_path,async_fn_name_list):
     return var_set
 
 class async_update:
-    def orchestrator_async_update(in_orchestrator_path,out_orchestrator_path,async_func_set):
-        
-        var_list=find_var(in_orchestrator_path,async_func_set)
-        print("Var list:",var_list)
+    def orchestrator_async_update(in_orchestrator_path, out_orchestrator_path, async_func_set):
+        var_list = find_var(in_orchestrator_path,async_func_set)
+        print("Var list:", var_list)
+
         with open(in_orchestrator_path, 'r') as file_ptr:
             lines = file_ptr.readlines()
 
         new_lines = []
         for line in lines:
             if 'context.call_activity' in line:
-                a,b,c= extract_var(line)
-                if c in var_list:
-                    new_code=codegen(c,a,b)
+                var_name, first_arg, second_arg = extract_var(line)
+
+                if second_arg in var_list:
+                    new_code = codegen(second_arg, var_name, first_arg)
                     print(new_code)
                     new_lines.append(new_code)
                 else:
                     new_lines.append(line)    
             else:
                 new_lines.append(line)
-        # print(new_lines)
+        
         with open(out_orchestrator_path, 'w') as file_ptr:
             for line in new_lines:
                 file_ptr.write("".join(line))
-        os.system(f"autopep8 --in-place {out_orchestrator_path}")
-        # os.system(f"autopep8 --in-place {out_orchestrator_path}")
+
+        os.system(f"autopep8 --in-place {out_orchestrator_path}")        
                 
 # input_path='/home/tarun/Azure/ip_orchestrtor.py'
 # output_path='/home/tarun/Azure/out_orch.py'
