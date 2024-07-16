@@ -15,10 +15,15 @@ class UserDag:
     __functions = {}  # map: functionName -> functionObject
 
     # Constructor
+    
+    
     def __init__(self, user_config_path):
         # throw an exception if loading file has a problem
         try:
             self.__dag_config_data = self.__load_user_spec(user_config_path)
+            self.__nodeIDMap = {}
+            self.__dag = nx.DiGraph()
+            self.__functions = {}
         except Exception as e:
             raise e
 
@@ -34,8 +39,17 @@ class UserDag:
                 node["NodeName"],
                 node["Path"],
                 node["EntryPoint"],
-                node["MemoryInMB"],
+                node["MemoryInMB"]
             )
+
+            print("NodeKeys -", list(node.keys()))
+
+            if "IsAsync" in node and node["IsAsync"]:
+                self.__functions[node["NodeName"]].set_is_async(True)
+
+            if "IsContainerised" in node and node["IsContainerised"]:
+                self.__functions[node["NodeName"]].set_is_containerised(True)
+
             self.__dag.add_node(
                 nodeID,
                 NodeName=node["NodeName"],
@@ -232,6 +246,7 @@ class UserDag:
         # initialise graphs
         collapsed_dag = wf_dag
         output_dag = wf_dag
+        
         while len(output_dag.nodes()) != 1:
             linear_collapsed_dag = self._collapse_linear_chains(collapsed_dag)
             collapsed_dag = self._collapse_parallel_chains(linear_collapsed_dag)
@@ -241,3 +256,33 @@ class UserDag:
             tasklist = output_dag.nodes[node]["machine_list"]
 
         return tasklist
+    def get_successor_node_names(self, node_name):
+        # Get the node ID corresponding to the given node name
+        node_id = self.__nodeIDMap.get(node_name)
+        
+        if node_id is None:
+            # Handle case where node name is not found
+            return []
+        
+        # # Get successors (nodes pointed to by the given node)
+        # successors = self.__dag.successors(node_id)
+        
+        # # Get node names of successors
+        # successor_node_names = [self.__dag.nodes[successor]['NodeName'] for successor in successors]
+        successor_node_names=[]
+        # print(node_name)
+        for node in self.__dag_config_data["Edges"]:
+            node_n=list(node.keys())[0]
+            print(node)
+            if node_name == node_n:
+                for sucessor in node[node_n]:
+                    successor_node_names.append(sucessor)
+        
+        return successor_node_names
+    
+    def get_user_dag_nodes(self):
+        return self.__dag_config_data["Nodes"]
+    def get_user_dag_edges(self):
+        return self.__dag_config_data["Edges"]
+    def get_dag(self):
+        return self.__dag

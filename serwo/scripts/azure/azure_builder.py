@@ -4,6 +4,7 @@ import pathlib
 import shutil
 from jinja2 import Environment, FileSystemLoader
 from signal import signal, SIGPIPE, SIG_DFL
+from .orchestrator_async_update import async_update
 
 signal(SIGPIPE,SIG_DFL)
 from random import randint
@@ -73,6 +74,15 @@ def get_user_workflow_details():
     fns_data = data['Nodes']
     return fns_data,data['WorkflowName']
 
+def get_set_of_async_funtions(fns_data):
+    # json_path = user_workflow_directory + '/' + user_dag_file_name
+    # data = json.load(open(json_path))
+    # fns_data = data['Nodes']
+    set_async_fun=set()
+    for node in fns_data:
+        if "IsAsync" in node and node["IsAsync"]:
+            set_async_fun.add(node["NodeName"])
+    return set_async_fun
 
 def build_user_fn_dirs(user_fns_data):
     for fn in user_fns_data:
@@ -243,7 +253,7 @@ def copy_all_dirs(fn_dir_path,fin_func_dir):
                 path = f'{fn_dir_path}/{dir}'
                 fr.f_and_r(path,f'{fin_func_dir}/func.py',str_find,str_replace)
 
-        if '.py' not in dir and 'samples'!=dir:
+        if '.py' not in dir and 'samples'!=dir and dir!='Dockerfile':
             if not os.path.exists(fin_func_dir+'/'+dir):
                 final_path = fn_dir_path+'/'+dir
                 ## if final_path is a directory
@@ -339,7 +349,6 @@ def generate_app_name_and_populate_and_get_ingress_queue_name(user_app_name,regi
 
 def build(user_dir, dag_definition_file, region, part_id,is_netherite):
     global USER_DIR,DAG_DEFINITION_FILE
-
     USER_DIR = user_dir
     DAG_DEFINITION_FILE = dag_definition_file
     init_paths()
@@ -350,7 +359,13 @@ def build(user_dir, dag_definition_file, region, part_id,is_netherite):
     copy_meta_files(user_fns_data,ingress_queue_name,app_name,is_netherite)
     gen_requirements(user_fns_data)
     re_written_generator(user_fns_data)
-
+    async_func_set = get_set_of_async_funtions(user_fns_data)
+    orchestrator_generated_path = f"{user_workflow_directory}/orchestrator.py"
+    orch_dest_path = f"{az_functions_path}/Orchestrate/__init__.py"
+    print("Async_Fn_detction",async_func_set)
+    print("Orchestrator initial path:",orchestrator_generated_path)
+    print("Orchestrator dest path:",orch_dest_path)
+    async_update.orchestrator_async_update(orchestrator_generated_path,orch_dest_path,async_func_set)
 
 if __name__ == '__main__':
     user_dir = sys.argv[1]

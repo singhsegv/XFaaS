@@ -1,5 +1,6 @@
 # Python base imports
 import os
+import copy
 import sys
 import pathlib
 import shutil
@@ -35,11 +36,6 @@ class AWS:
         self.__trigger_type = TriggerType.get_trigger_type(trigger_type)
         self.__part_id = part_id
 
-        # file parent directory
-        """
-        TODO - change this parent directory accordingly if we plan to move
-        this file into another folder
-        """
         self.__parent_directory_path = pathlib.Path(__file__).parent
 
         # xfaas specfic directories
@@ -61,7 +57,10 @@ class AWS:
         self.__sam_build_dir = self.__aws_build_dir / f"sam-build"
 
         # DAG related parameters
+        print("User Path",self.__dag_definition_path)
         self.__user_dag = AWSUserDag(self.__dag_definition_path)
+        print("User Dag",self.__user_dag.get_dag())
+        self.__networkxDag = copy.deepcopy(self.__user_dag.get_dag())
         self.__sam_stackname = (
             ##random 3 digit number
 
@@ -72,16 +71,8 @@ class AWS:
         self.__outputs_filepath = (
             self.__serwo_resources_dir / f"aws-{self.__region}-{self.__part_id}.json"
         )
+        
 
-    """
-    NOTE - This is a replacement for the create_env.sh file
-    Creates an environment within the build directory which stores all the files and 
-    deployment metadata within the build directory
-
-    TODO - delete the file under scripts/aws/create_env.sh
-    TODO - remove the "functions" hardcoded directory name and maybe 
-           read it from a config?
-    """
 
     def __create_environment(self):
         # Create functions directory
@@ -116,7 +107,7 @@ class AWS:
         fn_module_name,
         runner_template_filename,
         runner_template_dir,
-        runner_filename,
+        runner_filename
     ):
         # TODO - should this be taken in from the dag-description?
         fn_requirements_filename = "requirements.txt"
@@ -133,6 +124,9 @@ class AWS:
         """
         logger.info(f"Moving requirements file for {fn_name} for user at to {fn_dir}")
         shutil.copyfile(src=f"{user_fn_path / fn_requirements_filename}", dst=f"{fn_dir / fn_requirements_filename}")
+
+        # if is_containerbased_aws:
+        #     shutil.copyfile(src=f"{user_fn_path}/Dockerfile", dst=f"{fn_dir}/Dockerfile")
 
         # Add the XFaaS specific requrirements on to the function requirements
         logger.info(
@@ -167,7 +161,7 @@ class AWS:
         fnr_string = f"USER_FUNCTION_PLACEHOLDER"
         temp_runner_path = user_fn_path / f"{fn_name}_temp_runner.py"
         runner_template_path = runner_template_dir / runner_template_filename
-        
+        # runner_template_path="alone_app_runner.py"
         print("Here", runner_template_path)
         with open(runner_template_path, "r") as file:
             contents = file.read()
@@ -183,11 +177,15 @@ class AWS:
         """
         logger.info(f"Stickytape the runner template for dependency resolution")
         runner_file_path = fn_dir / f"{runner_filename}.py"
-        os.system(f"stickytape {temp_runner_path} > {runner_file_path}")
-
+        print("Temprory  runner path",temp_runner_path)
+        print("Runner File path",runner_file_path)
+        # os.system(f"stickytape {temp_runner_path} > {runner_file_path}")
         logger.info(f"Deleting temporary runner")
-        os.remove(temp_runner_path)
-
+        rename_for_standalone=user_fn_path/f"standalone_app_runner.py"
+        # os.remove(temp_runner_path)
+        os.rename(temp_runner_path,rename_for_standalone)
+        copy_if_not_exists(user_fn_path,fn_dir)
+        os.remove(rename_for_standalone)
         logger.info(f"Successfully created build directory for function {fn_name}")
 
     """
@@ -313,7 +311,7 @@ class AWS:
         function_object_map = self.__user_dag.get_node_object_map()
         statemachine = self.__get_statemachine_params()
         statemachine_structure = self.__user_dag.get_statemachine_structure()
-
+        print("Funtion Metadata:-",function_metadata_list)
         try:
             AWSSfnYamlGenerator.generate_sfn_yaml(
                 function_metadata_list,
@@ -322,17 +320,38 @@ class AWS:
                 self.__yaml_template_dir,
                 self.__aws_build_dir,
                 self.__yaml_file,
-                self.__trigger_type,
+                self.__trigger_type
             )
         except Exception as e:
             logger.error(e)
             traceback.print_exc()
             exit()
-
+        
         logger.info("Building Statemachines JSON..")
-        AWSSfnAslBuilder.generate_statemachine_json(
-            statemachine_structure, self.__aws_build_dir, self.__json_file
-        )
+        sfn_json =  AWSSfnAslBuilder.generate_statemachine_json(
+                        statemachine_structure, self.__aws_build_dir, self.__json_file
+                    )
+        
+        
+        dag_json=self.__user_dag.get_user_dag_nodes()
+        list_async_fns= get_set_of_async_funtions(dag_json)
+        # print("List of Async Fns:",list_async_fns)
+        changing_fns=set()
+        for node_name in list_async_fns:
+            successors = self.__user_dag.get_successor_node_names(node_name)
+            for fn_name in successors:
+                changing_fns.add((fn_name,node_name))
+
+        # print("Set of changing funtions:",changing_fns)
+        changing_fns_list=list(changing_fns)
+        # print("List of changing funtions:",changing_fns_list)
+        # Statemachine.asl.josn should be changed here
+        sfn_json_copy = copy.deepcopy(json.loads(sfn_json))
+        data=add_async_afn_builder(sfn_json_copy,changing_fns_list)
+        # print("Updated data of sfn builder after adding poll",data)
+        with open(f"{self.__aws_build_dir}/{self.__json_file}", "w") as statemachinejson:
+            statemachinejson.write(json.dumps(data))
+        print("sucessfully written data into the file")
 
     """
     NOTE - build function
@@ -340,7 +359,7 @@ class AWS:
 
     def build_resources(self):
         logger.info(f"Creating environment for {self.__user_dag.get_user_dag_name()}")
-        xfaas_fn_build_dir = self.__create_environment()
+        xfaas_fn_build_dir = self.__create_environment() 
 
         logger.info(
             f"Initating standalone runner creation for {self.__user_dag.get_user_dag_name()}"
@@ -351,6 +370,7 @@ class AWS:
             f"Generating ASL templates for {self.__user_dag.get_user_dag_name()}, \
                      AWS Stack - {self.__sam_stackname}"
         )
+
         self.__generate_asl_template()
 
         logger.info("Adding API specification to user directory")
@@ -384,7 +404,7 @@ class AWS:
     def build_workflow(self):
         logger.info(f"Starting SAM Build for {self.__user_dag.get_user_dag_name()}")
         os.system(
-            f"sam build --build-dir {self.__sam_build_dir} --template-file {self.__aws_build_dir / self.__yaml_file}"
+            f"sam build --build-dir {self.__sam_build_dir} --template-file {self.__aws_build_dir / self.__yaml_file} "
         )
 
     """
@@ -402,17 +422,18 @@ class AWS:
               --no-confirm-changeset \
               --resolve-image-repos \
               --disable-rollback \
-              --resolve-s3"
+              --resolve-s3 "
         )
 
         logger.info(f"Writing SAM outputs to .. {self.__outputs_filepath}")
         os.system(
             f'aws cloudformation describe-stacks \
             --stack-name {self.__sam_stackname} \
-            --region {self.__region} \
             --query "Stacks[0].Outputs" \
             --output json > {self.__outputs_filepath}'
         )
+        # print("Sam stack name",self.__sam_stackname)
+        # print("Output File path",self.__outputs_filepath)
 
         ## add sam stack name to ouput filepat
         with open(self.__outputs_filepath, "r") as f:
@@ -422,3 +443,54 @@ class AWS:
             json.dump(data, f, indent=4)
 
         return self.__outputs_filepath
+
+
+def add_async_afn_builder(data,list):
+
+    for i in range(0,len(list)):
+        (fn_name,sub) =list[i]
+        poll_next=data["States"][fn_name]['Next']
+        checkPollcondition='CheckPollCondition'+str(i)
+        waitstate='WaitState'+str(i)
+        data["States"][sub]['Next']=waitstate
+        data["States"][fn_name]['Next']=checkPollcondition
+        data["States"][checkPollcondition]={
+                "Type": "Choice",
+                "Choices": [
+                    {
+                        "Variable": "$.body.Poll",
+                        "BooleanEquals": False,
+                        "Next": poll_next
+                    }
+                ],
+                "Default": waitstate
+            }
+        data["States"][waitstate]={
+                "Type": "Wait",
+                "Seconds": 100,
+                "Next": fn_name
+            }
+    return data
+
+
+def get_set_of_async_funtions(fns_data):
+    # print("Funtions data:",(fns_data))
+    # fns_data=json.loads(fns_data)
+    list_async_fun=[]
+    for node in fns_data:
+        if "IsAsync" in node and node["IsAsync"]:
+            node_name=node["NodeName"]
+            list_async_fun.append(node_name)
+    return list_async_fun
+
+
+def copy_if_not_exists(source_directory, destination_directory):
+    for item in os.listdir(source_directory):
+        src_path = os.path.join(source_directory, item)
+        dst_path = os.path.join(destination_directory, item)
+        if os.path.exists(dst_path):
+            continue  # Skip if the item already exists in the destination
+        if os.path.isdir(src_path):
+            shutil.copytree(src_path, dst_path)  # Copy entire folder
+        else:
+            shutil.copy(src_path, dst_path)  # Copy individual file

@@ -25,9 +25,10 @@ def generate_sfn_yaml(
     template_dir: str,
     output_dir: str,
     yaml_file: str,
-    trigger_type: TriggerType,
+    trigger_type: TriggerType
 ) -> None:
     # function resource strings
+    
     arns = []
     for function in function_params:
         try:
@@ -38,7 +39,9 @@ def generate_sfn_yaml(
         except:
             raise AWSSfnYamlGeneratorExeception("Invalid function params error")
 
+
     # statemachine json url (this would be coming in post build ?)
+    print(f"Statemachine Parameters- {statemachine_params}")
     try:
         uri = statemachine_params["uri"]
         print(f"Uri for statemachine - {uri}")
@@ -69,6 +72,9 @@ def generate_sfn_yaml(
     try:
         file_loader = FileSystemLoader(template_dir)
         env = Environment(loader=file_loader)
+        # if is_containerbased:
+        #     template = env.get_template("awsfn-container-based.yaml")
+        # else:
         template = env.get_template(get_template_file(trigger_type))
         print(f"Created jinja2 environment")
     except:
@@ -76,6 +82,7 @@ def generate_sfn_yaml(
             "Error in loading jinja template environment"
         )
 
+    print("funtion Parameter",function_params)
     # render function
     try:
         output = template.render(
@@ -91,6 +98,8 @@ def generate_sfn_yaml(
             stepfunctionrolearn_attribute=stepfunctionrolearn_attribute,
             apifilename=apifilename,
         )
+        print("Output template:",output)
+        # print("Out put directory:",output_dir)
     except:
         raise AWSSfnYamlGeneratorExeception("Error in jinja template render function")
 

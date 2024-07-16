@@ -20,10 +20,15 @@ class CSP:
         if self.__name == 'azure':
             self.build_az(dag_definition_file, dag_definition_path, part_id, region, user_dir, is_netherite)
         elif self.__name == 'aws':
-            aws_deployer = AWS(user_dir, dag_definition_file, "REST", part_id, region)
+            if part_id == "0000":
+                aws_deployer = AWS(user_dir, dag_definition_file, "REST", part_id, region)
+            else:
+                aws_deployer = AWS(user_dir, dag_definition_file, "SQS", part_id, region)
+
             aws_deployer.build_resources()
             aws_deployer.build_workflow()
             aws_deployer.deploy_workflow()
+
         elif self.__name.lower() == 'openwhisk':
             private_cloud_deployer = OpenWhisk(user_dir=user_dir, dag_file_name=dag_definition_file, part_id=part_id)
             
@@ -34,7 +39,7 @@ class CSP:
             private_cloud_deployer.build_workflow()
 
             print(":" * 80, "Deploying OpenWhisk")
-            private_cloud_deployer.deploy_workflow()
+            private_cloud_deployer.deploy_workflow()    
 
 
     def build_az(self, dag_definition_file, dag_definition_path, part_id, region, user_dir,is_netherite):
