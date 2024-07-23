@@ -14,10 +14,11 @@ logger = LoggerFactory.get_logger(__file__, log_level="INFO")
 
 
 class OpenWhisk:
-    def __init__(self, user_dir, dag_file_name, part_id):
+    def __init__(self, user_dir, dag_file_name, part_id, region):
         self.__user_dir = Path(user_dir)
         self.__dag_file_name = dag_file_name
         self.__part_id = part_id
+        self.__region = region
 
         self.__parent_directory_path = Path(__file__).parent
 

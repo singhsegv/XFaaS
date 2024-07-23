@@ -25,7 +25,7 @@ class CSP:
             aws_deployer.build_workflow()
             aws_deployer.deploy_workflow()
         elif self.__name.lower() == 'openwhisk':
-            private_cloud_deployer = OpenWhisk(user_dir=user_dir, dag_file_name=dag_definition_file, part_id=part_id)
+            private_cloud_deployer = OpenWhisk(user_dir=user_dir, dag_file_name=dag_definition_file, part_id=part_id, region=region)
             
             print(":" * 80, "Generating resources for OpenWhisk Actions")
             private_cloud_deployer.build_resources()
