@@ -493,12 +493,26 @@ class OpenWhisk:
         logger.info(":" * 30)
         logger.info("Writing output json resource file")
         logger.info(":" * 30)
+        
+        wsk_host_output = subprocess.run(["wsk", "property", "get", "--apihost"], capture_output=True)
+        wsk_auth_output = subprocess.run(["wsk", "property", "get", "--auth"], capture_output=True)
 
-        output_resource_file_path = self.__serwo_resources_dir / f"openwhisk-{self.__part_id}.json"
+        if wsk_host_output.returncode != 0 or wsk_auth_output.returncode != 0:
+            print(" X " * 30)
+            print("Failed to get host and auth from 'wsk' client for the resources")
+            print(" X " * 30)
+        
+        wsk_host = wsk_host_output.stdout.decode("utf-8").strip().split()[-1].strip()
+        execution_auth = wsk_auth_output.stdout.decode("utf-8").strip().split()[-1].strip()
+        execution_url = f"https://{wsk_host}/api/v1/namespaces/{self.__action_namespace}/actions/{self.__user_dag.get_user_dag_name()}/orchestrator?blocking=false"
+
+        output_resource_file_path = self.__serwo_resources_dir / f"openwhisk-{self.__region}-{self.__part_id}.json"
         with open(output_resource_file_path, "w") as f:
             output = {
                 "WorkflowEntrypoint": self.__openwhisk_workflow_orchestrator_action_name,
-                "Decription": f"Run 'wsk -i action invoke {self.__openwhisk_workflow_orchestrator_action_name}' to start the workflow"
+                "Decription": f"Run 'wsk -i action invoke {self.__openwhisk_workflow_orchestrator_action_name}' to start the workflow",
+                "ExecutionUrl": execution_url,
+                "ExecutionAuth": execution_auth,
             }
             
             f.write(json.dumps(output, indent=4))
