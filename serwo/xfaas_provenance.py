@@ -109,10 +109,7 @@ def generate_provenance_artifacts(user_dir, wf_id, refactored_wf_id, wf_deployme
         pathlib.Path(user_dir), "build/workflow/resources"
     )
 
-    if csp == 'openwhisk':
-        resources_file = f'{resources_dir}/{csp}-{part_id}.json'
-    else:
-        resources_file = f'{resources_dir}/{csp}-{region}-{part_id}.json'
+    resources_file = f'{resources_dir}/{csp}-{region}-{part_id}.json'
     
     # load json from file
     with open(resources_file) as f:
