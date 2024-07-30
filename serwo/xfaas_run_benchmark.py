@@ -209,6 +209,17 @@ def template_openwhisk_jmx_file(rps, duration, execute_url, execute_auth_base64,
         f.write(data)
 
 
+def add_jmeter_openwhisk_response_path(jmx_file_path, wf_user_directory, wf_deployment_id, run_id):
+    with open(jmx_file_path) as f:
+        data = f.read()
+
+    jmeter_responses_file_path = f"{wf_user_directory}/{wf_deployment_id}/{run_id}/jmeter_responses.csv"
+    data = data.replace("JMETER_RESPONSES_PATH", jmeter_responses_file_path)
+    
+    with open(jmx_file_path, "w") as f:
+        f.write(data)
+
+
 def make_jmx_file(csp, rps, duration, payload_size, wf_name, execute_url, state_machine_arn, dynamism, session_id, wf_user_directory, part_id, region, wf_deployment_id, run_id, payload, is_localhost, execute_auth_creds):
     """
     Changelog:
@@ -221,6 +232,7 @@ def make_jmx_file(csp, rps, duration, payload_size, wf_name, execute_url, state_
     elif 'openwhisk' in csp:
         encoded_auth = base64.b64encode(execute_auth_creds.encode()).decode('utf-8')
         template_openwhisk_jmx_file(rps, duration, execute_url, encoded_auth, jmx_template_path, jmx_output_path, session_id, payload)
+        add_jmeter_openwhisk_response_path(jmx_output_path, wf_user_directory, wf_deployment_id, run_id)
     else:
         template_aws_jmx_file(rps, duration, execute_url, state_machine_arn, payload_size, jmx_template_path, jmx_output_path, session_id,payload)
 
