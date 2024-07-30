@@ -127,7 +127,7 @@ def add_collect_logs(dag_definition_path,user_wf_dir, xfaas_user_dag,region):
         "Path": new_collect_logs_dir,
         "EntryPoint": "func.py",
         "CSP": "NA",
-        "MemoryInMB": 128
+        "MemoryInMB": 512
     }
 
     ##open dag definition file and add the node to the dag
