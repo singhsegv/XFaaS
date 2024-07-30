@@ -319,7 +319,7 @@ def generate_shell_script_and_scp(csp,payload_size, wf_name, rps, duration,dynam
             os.system(f"ssh {server_user_id}@{server_ip} ./shell_scripts/{shell_file_name}")
     else:
         os.system(f"chmod +x {output_path}")
-        os.system(f"./{output_path}")
+        os.system(f". {output_path}")
     
 def load_payload(wf_user_directory,payload_size):
     payload_path = f"{wf_user_directory}/samples/{payload_size}/input/input.json"
