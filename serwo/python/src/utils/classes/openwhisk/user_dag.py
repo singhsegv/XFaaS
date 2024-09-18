@@ -18,6 +18,10 @@ class UserDag:
     __dag = nx.DiGraph() # networkx directed graph
     __functions = {} # map: functionName -> functionObject
 
+    # This flag is used to decide between using openwhisk-compose vs native sequence actions
+    # for performance reasons.
+    __has_parallel_nodes = False
+
     def __init__(self, user_config_path) -> None:
         try:
             self.__dag_config_data = self.__load_user_spec(user_config_path)
@@ -62,6 +66,9 @@ class UserDag:
                 for val in edge[key]:
                     self.__dag.add_edge(self.__nodeIDMap[key], self.__nodeIDMap[val])
 
+    def has_parallel_nodes(self):
+        return self.__has_parallel_nodes
+    
     def _generate_random_variable_name(self, n=4):
         res = ''.join(random.choices(string.ascii_letters, k=n))
         return str(res).lower()
@@ -291,6 +298,7 @@ class UserDag:
             self._collapse_parallel_chains(output_dag)
             new_parallel_nodes = self.get_updated_nodes(output_dag)
             if len(new_parallel_nodes) > 0:
+                self.__has_parallel_nodes = True
                 generated_code += f"\n// Iteration{iteration}: Parallel\n"
 
             for new_node in new_parallel_nodes:

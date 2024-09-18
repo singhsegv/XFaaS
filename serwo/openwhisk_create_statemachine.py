@@ -325,6 +325,11 @@ class OpenWhisk:
         logger.info("Installing nodejs and openwhisk-composer")
         logger.info(":" * 30)
 
+        # Since sequence actions don't require openwhisk-compose
+        # No need for local nodesjs etc
+        if not self.__user_dag.has_parallel_nodes():
+            return
+
         builder_dir = str(self.__openwhisk_helpers_dir.resolve())
         builder_path = os.path.join(builder_dir, "local_nodejs_installer.sh")
         nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
@@ -458,35 +463,59 @@ class OpenWhisk:
         logger.info("Deploying OpenWhisk action for each function: SUCCESS")
         logger.info(":" * 30)
 
-        logger.info(":" * 30)
-        logger.info("Deploying OpenWhisk orchestrator action")
-        logger.info(":" * 30)
-        
-        nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
-        local_nodejs_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"node"
-        ow_deployer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "deploy.js")
-        os.system(f"{local_nodejs_binary_path} {ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
-        
-        ignore_certs = "false"
-        if self.__ignore_certs:
-            ignore_certs = "true"
+        if not self.__user_dag.has_parallel_nodes():
+            logger.info(":" * 30)
+            logger.info("Creating OpenWhisk Sequence action out of the deployed actions")
+            logger.info(":" * 30)
 
-        # Hackish way to create this complex string input for orchestrator function
-        workflow_update_cmd = f"wsk -i action update {self.__openwhisk_workflow_orchestrator_action_name} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency} --memory {self.__action_memory}"
-        workflow_update_cmd += " --param '$composer' '{"
-        workflow_update_cmd += '"redis":{"uri":"'
-        workflow_update_cmd += self.__redis_url
-        workflow_update_cmd += '"},"openwhisk":{"ignore_certs":'
-        workflow_update_cmd += ignore_certs
-        workflow_update_cmd += '}'
-        workflow_update_cmd += "}'"
+            # FIXME: Assumption is that user dag has ordered nodes
+            # This assumption can bite back
+            max_memory = -1
+            seq_items = []
+            for func_name in self.__user_dag.get_node_object_map():
+                action_name = f"/{self.__action_namespace}/{self.__user_dag.get_user_dag_name()}/{func_name}"
+                max_memory = max(max_memory, int(self.__user_dag.get_node_object_map()[func_name].get_memory()))
+                seq_items.append(action_name)
 
-        try:
-            os.system(workflow_update_cmd)
-        except Exception as e:
-            print("Workflow action updation command failed")
-            print(e)
+            seq_items_str = ",".join(seq_items)
+                        
+            try:
+                os.system(f"wsk -i action create {self.__openwhisk_workflow_orchestrator_action_name} --sequence {seq_items_str} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency} --memory {memory_in_mb}")
+            except Exception as e:
+                print("X" * 20)
+                print(f"Action creation command failed for {action_name}")
+                print(e)
+                print("X" * 20)
+        else:
+            logger.info(":" * 30)
+            logger.info("Deploying OpenWhisk orchestrator action")
+            logger.info(":" * 30)
+            
+            nodejs_local_dir = str(self.__openwhisk_helpers_nodejs_dir.resolve())
+            local_nodejs_binary_path = self.__openwhisk_helpers_nodejs_dir/"bin"/"node"
+            ow_deployer_binary_path = os.path.join(nodejs_local_dir, "node_modules", "openwhisk-composer", "bin", "deploy.js")
+            os.system(f"{local_nodejs_binary_path} {ow_deployer_binary_path} {self.__openwhisk_workflow_orchestrator_action_name} {self.__openwhisk_composer_output_path} -w -i")
         
+            ignore_certs = "false"
+            if self.__ignore_certs:
+                ignore_certs = "true"
+
+            # Hackish way to create this complex string input for orchestrator function
+            workflow_update_cmd = f"wsk -i action update {self.__openwhisk_workflow_orchestrator_action_name} --timeout {self.__action_timeout} --concurrency {self.__action_concurrency} --memory {self.__action_memory}"
+            workflow_update_cmd += " --param '$composer' '{"
+            workflow_update_cmd += '"redis":{"uri":"'
+            workflow_update_cmd += self.__redis_url
+            workflow_update_cmd += '"},"openwhisk":{"ignore_certs":'
+            workflow_update_cmd += ignore_certs
+            workflow_update_cmd += '}'
+            workflow_update_cmd += "}'"
+
+            try:
+                os.system(workflow_update_cmd)
+            except Exception as e:
+                print("Workflow action updation command failed")
+                print(e)
+            
         logger.info(":" * 30)
         logger.info("Deploying OpenWhisk orchestrator action: SUCCESS")
         logger.info(":" * 30)
